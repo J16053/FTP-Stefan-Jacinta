@@ -13,11 +13,14 @@
 
 int main(int argc, char * argv[])
 {
+  // require user to input server address and server port
   if (argc < 3) {
     fprintf(stderr, "Not enough arguments\n");
     printf("Usage: ./FTPclient ftp-server-ip-address ftp-server-port-number\n");
     exit(1);
   }
+
+  // define server details
   const char * const server_address = argv[1]; // CAN'T CHANGE server_address
   int server_port = atoi(argv[2]);
   int sockfd, i;
@@ -41,12 +44,48 @@ int main(int argc, char * argv[])
 
   while (true) {
     printf("ftp > ");
-    fgets(buf, 1024, stdin);
+    fgets(buf, sizeof(buf), stdin);
+    char input[1024];
+    strncpy (input, buf, sizeof(buf));
+    char * command = strtok(buf, " \n");
+    char * arg1 = strtok(NULL, " ");
+    printf("%s\n", input);
+    if (!strcmp(command, "USER")) {
+      printf("Entered USERNAME\n");
+      if (!arg1) {  // No username provided
+        printf("Please input username.\n");
+      } else {
+        write(sockfd, input, strlen(input+1));
+      }
+    } else if (!strcmp(command, "PASS")) {
+      printf("Entered PASSWORD\n");
+      if (!arg1) {  // No password provided
+        printf("Please input password.\n");
+      } else {
+        write(sockfd, input, strlen(input+1));
+      }
+    } else if (!strcmp(command, "PUT")) {
+      printf("Entered PUT\n");
+      if (!arg1) {  // No filename provided
+        printf("Please input filename.\n");
+      } else {
+        write(sockfd, input, strlen(input+1));
+      }
+    } else if (!strcmp(command, "GET")) {
+      if (!arg1) {  // No filename provided
+        printf("Please input filename.\n");
+      } else {
+        write(sockfd, input, strlen(input+1));
+      }
+      printf("Entered GET\n");
+    }
     write(sockfd, buf, strlen(buf+1));
-    if (read(sockfd, buf, 1024) == 0) {
+
+    if (read(sockfd, buf, sizeof(buf)) == 0) {
       printf("Server closed connection\n");
       exit(0);
     }
     printf("Server response: %s\n", buf);
+
   }
 }
