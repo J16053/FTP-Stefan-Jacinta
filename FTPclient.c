@@ -47,6 +47,7 @@ int main(int argc, char * argv[])
     fgets(buf, sizeof(buf), stdin);
     char input[1024];
     strncpy (input, buf, sizeof(buf));
+    bool validInput = false;
     char * command = strtok(buf, " \n");
     char * arg1 = strtok(NULL, " ");
     printf("%s\n", input);
@@ -55,6 +56,7 @@ int main(int argc, char * argv[])
       if (!arg1) {  // No username provided
         printf("Please input username.\n");
       } else {
+        validInput = true;
         write(sockfd, input, strlen(input+1));
       }
     } else if (!strcmp(command, "PASS")) {
@@ -62,6 +64,7 @@ int main(int argc, char * argv[])
       if (!arg1) {  // No password provided
         printf("Please input password.\n");
       } else {
+        validInput = true;
         write(sockfd, input, strlen(input+1));
       }
     } else if (!strcmp(command, "PUT")) {
@@ -69,23 +72,24 @@ int main(int argc, char * argv[])
       if (!arg1) {  // No filename provided
         printf("Please input filename.\n");
       } else {
+        validInput = true;
         write(sockfd, input, strlen(input+1));
       }
     } else if (!strcmp(command, "GET")) {
       if (!arg1) {  // No filename provided
         printf("Please input filename.\n");
       } else {
+        validInput = true;
         write(sockfd, input, strlen(input+1));
       }
       printf("Entered GET\n");
     }
-    write(sockfd, buf, strlen(buf+1));
-
-    if (read(sockfd, buf, sizeof(buf)) == 0) {
-      printf("Server closed connection\n");
-      exit(0);
+    if (validInput) {
+      if (read(sockfd, input, sizeof(input)) == 0) {
+        printf("Server closed connection\n");
+        exit(0);
+      }
+      printf("Server response: %s\n", input);
     }
-    printf("Server response: %s\n", buf);
-
   }
 }
