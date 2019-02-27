@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,9 +8,8 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <netinet/in.h>
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 int main(int argc, char * argv[])
 {
@@ -102,7 +102,7 @@ int main(int argc, char * argv[])
         wait( &status );        // parent: wait for the child (not really necessary)
       }
     } else if (!strcmp(command, "QUIT")) {
-      exit(1);
+      exit(0);
     }
     if (validInput) {
       if (read(sockfd, input, sizeof(input)) == 0) {
