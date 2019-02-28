@@ -10,7 +10,9 @@
 #include <signal.h>
 #include <string.h>
 
-#define MAXCLIENTS 30
+#define MAX_CLIENTS 30
+#define NUM_USERS 2
+char * USERS[NUM_USERS][2] = {{"JACINTA", "PASSWORD"}, {"STEFAN", "PASSWORD"}};
 
 int main(int argc, char * argv[])
 {
@@ -20,19 +22,26 @@ int main(int argc, char * argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
-  int clients[MAXCLIENTS][2];
+  int clients[MAX_CLIENTS][3];
+  /*struct client {
+    int socket; // socket descriptor
+    int status; // 0 = not connected, 1 = connected, 2 = username OK, 3 = logged in
+    int user; // user index
+  } clients[MAX_CLIENTS];*/
   /* clients[i][0] contains socket descriptor value
    * clients[i][1] contains status as follows:
    * 0 = client not connected (should occur when clients[i][0] == -1)
    * 1 = connected with no USER
    * 2 = USER OK but no PASS
    * 3 = fully logged in (USER/PASS authenticated)
+   * clients[i][2] contains user index (-1 when no user specified)
   */
 
   // initialize array of clients
-  for (i = 0; i < MAXCLIENTS; i++) {
+  for (i = 0; i < MAX_CLIENTS; i++) {
     clients[i][0] = -1;
     clients[i][1] = 0;
+    clients[i][2] = -1;
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -70,7 +79,7 @@ int main(int argc, char * argv[])
     maxfd = master_socket;
 
     // add child sockets to set
-    for (i = 0; i < MAXCLIENTS; i++) {
+    for (i = 0; i < MAX_CLIENTS; i++) {
         
         // get socket descriptor
         client_socket = clients[i][0];
@@ -101,7 +110,7 @@ int main(int argc, char * argv[])
       printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
 
       // add new socket to array of clients
-      for (i = 0; i < MAXCLIENTS; i++) {
+      for (i = 0; i < MAX_CLIENTS; i++) {
           
           // if position is empty, add it
           if (clients[i][0] < 0) {
@@ -113,14 +122,14 @@ int main(int argc, char * argv[])
       }
 
       // new client can not be added, close socket
-      if (i == MAXCLIENTS) {
+      if (i == MAX_CLIENTS) {
         printf("Too many connections\n");
         close(accepted_socket);
       }
     }
 
     // loop through all clients and check for activity on all client sockets
-    for (i = 0; i < MAXCLIENTS; i++) {
+    for (i = 0; i < MAX_CLIENTS; i++) {
 
       // skip if array position is not used
       if (clients[i][0] < 0) {
@@ -152,11 +161,34 @@ int main(int argc, char * argv[])
           if (!strcmp(command, "USER")) {
             printf("Entered USERNAME\n");
             // verify username
-            // send(clients[i][0], "331 Username OK, need password", 31, 0);
-            // send(clients[i][0], "430 Invalid username", 21, 0);
+            for (int u = 0; u < NUM_USERS; u++) {
+              clients[i][1] = 1;
+              clients[i][2] = -1;
+              if (!strcmp(arg1, USERS[u][0])) {
+                printf("VALID USERNAME\n");
+                clients[i][1] = 2;
+                clients[i][2] = u;
+                send(clients[i][0], "331 Username OK, need password", 31, 0);
+                break;
+              }
+            }
+            if (clients[i][2] == -1) {
+              send(clients[i][0], "430 Invalid username", 21, 0);
+              printf("INVALID USERNAME\n");
+            }
           } else if (!strcmp(command, "PASS")) {
             printf("Entered PASSWORD\n");
             // verify password
+            if (clients[i][1] != 2) {
+              send(clients[i][0], "530 Set USER first", 19, 0);
+            } else {
+              if (!strcmp(arg1, USERS[clients[i][2]][1])) {
+                clients[i][1] = 3;
+                send(clients[i][0], "230 User logged in, proceed", 28, 0);
+              } else {
+                send(clients[i][0], "430 Incorrect password", 23, 0);
+              }
+            }
           } else if (!strcmp(command, "PUT")) {
             // PUT file arg1 onto server
             printf("Entered PUT\n");
@@ -165,9 +197,9 @@ int main(int argc, char * argv[])
             printf("Entered GET\n");
           } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
             // system call and send result back to client
+          } else {
+            send(clients[i][0], buf, num, 0); // echo the message back to client
           }
-
-          send(clients[i][0], buf, num, 0); // echo the message back to client
         }
       }
     }

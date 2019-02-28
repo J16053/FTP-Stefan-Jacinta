@@ -58,7 +58,7 @@ int main(int argc, char * argv[])
     
     // printf("%s\n", input); // uncomment to view input
     if (!strcmp(command, "USER")) {
-      printf("Entered USERNAME\n");
+      // printf("Entered USERNAME\n");
       if (!arg1) {  // No username provided
         printf("Please input username.\n");
       } else {
@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
     } else if (!strcmp(command, "QUIT")) {
       exit(EXIT_SUCCESS);
     } else {
-      printf(stderr, "Command not found");
+      fprintf(stderr, "Command not found");
     }
     if (server_request) {
       if (read(sockfd, input, sizeof(input)) == 0) {
