@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
     } else if (!strcmp(command, "QUIT")) {
       exit(EXIT_SUCCESS);
     } else {
-      fprintf(stderr, "Command not found");
+      fprintf(stderr, "Command not found\n");
     }
     if (server_request) {
       if (read(sockfd, input, sizeof(input)) == 0) {
