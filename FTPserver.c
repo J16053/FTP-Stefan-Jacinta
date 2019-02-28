@@ -45,8 +45,8 @@ int main(int argc, char * argv[])
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (master_socket < 0) {
-    printf("Can't open socket\n");
-    exit(1);
+    fprintf(stderr, "Can't open socket\n");
+    exit(EXIT_FAILURE);
   }
 
   int reuse = 1;
@@ -58,14 +58,14 @@ int main(int argc, char * argv[])
 
   if (bind(master_socket, (struct sockaddr *) &server_addr, sizeof(server_addr))) {
     close(master_socket);
-    printf("Can't bind socket\n");
-    exit(1);
+    fprintf(stderr, "Can't bind socket\n");
+    exit(EXIT_FAILURE);
   }
   
   if (listen(master_socket, 5) < 0) {
     close(master_socket);
-    printf("Can't listen on socket\n");
-    exit(1);
+    fprintf(stderr, "Can't listen on socket\n");
+    exit(EXIT_FAILURE);
   }
 
   while (1) {
@@ -102,8 +102,8 @@ int main(int argc, char * argv[])
       // a client tries to connect
       socklen_t len = sizeof(client_addr);
       if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
-          printf("Can't accept connection\n");
-          exit(1);
+          fprintf(stderr, "Can't accept connection\n");
+          exit(EXIT_FAILURE);
       }
 
       printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
