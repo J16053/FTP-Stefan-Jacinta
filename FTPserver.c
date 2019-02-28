@@ -212,7 +212,7 @@ int main(int argc, char * argv[])
               send(clients[i].socket, "530 Not logged in", 23, 0);
             }
           } else {
-            send(clients[i].socket, buf, num, 0); // echo the message back to client
+            send(clients[i].socket, "502 Command not found", 22, 0);
           }
         }
       }
