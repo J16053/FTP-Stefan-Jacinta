@@ -20,11 +20,19 @@ int main(int argc, char * argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
-  int clients[MAXCLIENTS];
+  int clients[MAXCLIENTS][2];
+  /* clients[i][0] contains socket descriptor value
+   * clients[i][1] contains status as follows:
+   * 0 = client not connected (should occur when clients[i][0] == -1)
+   * 1 = connected with no USER
+   * 2 = USER OK but no PASS
+   * 3 = fully logged in (USER/PASS authenticated)
+  */
 
   // initialize array of clients
   for (i = 0; i < MAXCLIENTS; i++) {
-    clients[i] = -1;
+    clients[i][0] = -1;
+    clients[i][1] = 0;
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -65,7 +73,7 @@ int main(int argc, char * argv[])
     for (i = 0; i < MAXCLIENTS; i++) {
         
         // get socket descriptor
-        client_socket = clients[i];
+        client_socket = clients[i][0];
         
         // if socket descriptor is valid, then add it to read list
         if(client_socket > 0) {
@@ -96,8 +104,9 @@ int main(int argc, char * argv[])
       for (i = 0; i < MAXCLIENTS; i++) {
           
           // if position is empty, add it
-          if (clients[i] < 0) {
-              clients[i] = accepted_socket;
+          if (clients[i][0] < 0) {
+              clients[i][0] = accepted_socket;
+              clients[i][1] = 1;
               printf("[%d]Adding client to list of sockets with socket\n", i);
               break;
           }
@@ -113,26 +122,52 @@ int main(int argc, char * argv[])
     // loop through all clients and check for activity on all client sockets
     for (i = 0; i < MAXCLIENTS; i++) {
 
-      // skip it array position is not used
-      if (clients[i] < 0) {
+      // skip if array position is not used
+      if (clients[i][0] < 0) {
         continue;
       }
 
       // check for activity
-      if (FD_ISSET(clients[i], &read_fd_set)) {
+      if (FD_ISSET(clients[i][0], &read_fd_set)) {
         
         memset(buf, 0, sizeof(buf)); //reset the buffer
-        int num = recv(clients[i], buf, 1024, 0); // read from socket
+        int num = recv(clients[i][0], buf, 1024, 0); // read from socket
         
         // client closed the connection
         if (num == 0) {
           printf("[%d]Closing connection\n", i);
-          close(clients[i]);
-          FD_CLR(clients[i], &read_fd_set); // clear the file descriptor set for client[i]
-          clients[i] = -1;
-        } else {
+          close(clients[i][0]);
+          FD_CLR(clients[i][0], &read_fd_set); // clear the file descriptor set for client[i]
+          clients[i][0] = -1;
+          clients[i][1] = 0;
+        } else { // client sent a server request
           printf("[%d]Received: %s\n", i, buf);
-          send(clients[i], buf, num, 0); // echo the message back to client
+          char input[1024];
+          strncpy(input, buf, sizeof(buf));
+          
+          char * command = strtok(buf, " \n");
+          char * arg1 = strtok(NULL, " ");
+          
+          // printf("%s\n", input); // uncomment to view input
+          if (!strcmp(command, "USER")) {
+            printf("Entered USERNAME\n");
+            // verify username
+            // send(clients[i][0], "331 Username OK, need password", 31, 0);
+            // send(clients[i][0], "430 Invalid username", 21, 0);
+          } else if (!strcmp(command, "PASS")) {
+            printf("Entered PASSWORD\n");
+            // verify password
+          } else if (!strcmp(command, "PUT")) {
+            // PUT file arg1 onto server
+            printf("Entered PUT\n");
+          } else if (!strcmp(command, "GET")) {
+            // GET file arg1 from server and send result back to client
+            printf("Entered GET\n");
+          } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
+            // system call and send result back to client
+          }
+
+          send(clients[i][0], buf, num, 0); // echo the message back to client
         }
       }
     }

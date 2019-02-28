@@ -100,7 +100,6 @@ int main(int argc, char * argv[])
       exit(EXIT_SUCCESS);
     } else {
       printf(stderr, "Command not found");
-      exit(EXIT_SUCCESS);
     }
     if (server_request) {
       if (read(sockfd, input, sizeof(input)) == 0) {
