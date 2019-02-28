@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 void callSystem(const char *command, const char *options);
-void changeDir(const char *input);
+int changeDir(const char *input);
 
 int main(int argc, char * argv[])
 {
@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Can't open socket\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   memset(&addr, 0, sizeof(addr));
@@ -97,12 +97,12 @@ int main(int argc, char * argv[])
     } else if (!strcmp(command, "!CD")) {
       changeDir(input);
     } else if (!strcmp(command, "QUIT")) {
-      exit(0);
+      exit(EXIT_SUCCESS);
     }
     if (server_request) {
       if (read(sockfd, input, sizeof(input)) == 0) {
         printf("Server closed connection\n");
-        exit(0);
+        exit(EXIT_SUCCESS);
       }
       printf("Server response: %s\n", input);
     }
@@ -124,7 +124,7 @@ void callSystem(const char *command, const char *input) {
   system(shell_command);
 }
 
-void changeDir(const char *input) {
+int changeDir(const char *input) {
   int num_chars = strlen(input);
   char command[num_chars];
   strncpy(command, input, num_chars);
@@ -137,6 +137,9 @@ void changeDir(const char *input) {
     path = sep + 1;
   }
   if (chdir(path) == -1) {
-    printf("Invalid arguments for !CD.\n");
+    printf("Error: %s\n", strerror(errno));
+    return EXIT_FAILURE;
+  } else {
+    return EXIT_SUCCESS;
   }
 }
