@@ -103,6 +103,8 @@ int main(int argc, char * argv[])
       }
     } else if (!strcmp(command, "QUIT")) {
       exit(0);
+    } else {
+      printf(stderr, "Command not found");
     }
     if (validInput) {
       if (read(sockfd, input, sizeof(input)) == 0) {
