@@ -16,6 +16,8 @@
 #define CONNECTED 1
 #define USER_OK 2
 #define LOGGED_IN 3
+#define MAX_BUF 1024
+
 struct user {
   char * username;
   char * password;
@@ -25,14 +27,13 @@ int main(int argc, char * argv[])
 {
   int master_socket, accepted_socket, client_socket;
   struct sockaddr_in server_addr, client_addr;
-  char buf[1024];
+  char buf[MAX_BUF];
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
-  //int clients[MAX_CLIENTS][3];
   struct client {
     int socket; // socket descriptor
-    int status; // 0 = not connected, 1 = connected, 2 = username OK, 3 = logged in
+    int status; // -1 = not connected, 1 = connected, 2 = username OK, 3 = logged in
     int user; // user index
   } clients[MAX_CLIENTS];
 
@@ -139,7 +140,7 @@ int main(int argc, char * argv[])
       if (FD_ISSET(clients[i].socket, &read_fd_set)) {
         
         memset(buf, 0, sizeof(buf)); //reset the buffer
-        int num = recv(clients[i].socket, buf, 1024, 0); // read from socket
+        int num = recv(clients[i].socket, buf, MAX_BUF, 0); // read from socket
         
         // client closed the connection
         if (num == 0) {
@@ -150,42 +151,52 @@ int main(int argc, char * argv[])
           clients[i].status = UNINITIATED;
         } else { // client sent a server request
           printf("[%d]Received: %s\n", i, buf);
-          char input[1024];
+          char input[MAX_BUF];
           strncpy(input, buf, sizeof(buf));
           
-          char * command = strtok(buf, " \n");
+          char * command = strtok(input, " \n");
           char * arg1 = strtok(NULL, " ");
           
           // printf("%s\n", input); // uncomment to view input
           if (!strcmp(command, "USER")) {
             printf("Entered USERNAME\n");
             // verify username
-            for (int u = 0; u < NUM_USERS; u++) {
+            if (clients[i].status == USER_OK) {
               clients[i].status = CONNECTED;
               clients[i].user = UNINITIATED;
+            }
+            for (int u = 0; u < NUM_USERS; u++) {
+              printf("Checking user: %d\n", u);
               if (!strcmp(arg1, USERS[u].username)) {
                 printf("VALID USERNAME\n");
                 clients[i].status = USER_OK;
                 clients[i].user = u;
-                send(clients[i].socket, "331 Username OK, need password", 31, 0);
+                strcpy(buf, "331 Username OK, need password");
+                send(clients[i].socket, buf, sizeof(buf), 0);
                 break;
               }
             }
-            if (clients[i].user == UNINITIATED) {
-              send(clients[i].socket, "430 Invalid username", 21, 0);
+            if (clients[i].status != USER_OK) {
+              strcpy(buf, "430 Invalid username");
+              send(clients[i].socket, buf, sizeof(buf), 0);
               printf("INVALID USERNAME\n");
             }
           } else if (!strcmp(command, "PASS")) {
             printf("Entered PASSWORD\n");
             // verify password
             if (clients[i].status != USER_OK) {
-              send(clients[i].socket, "530 Set USER first", 19, 0);
+              strcpy(buf, "530 Set USER first");
+              send(clients[i].socket, buf, sizeof(buf), 0);
             } else {
               if (!strcmp(arg1, USERS[clients[i].user].password)) {
                 clients[i].status = LOGGED_IN;
-                send(clients[i].socket, "230 User logged in, proceed", 28, 0);
+                printf("PASSWORD OK\n");
+                strcpy(buf, "230 User logged in, proceed");
+                send(clients[i].socket, buf, sizeof(buf), 0);
               } else {
-                send(clients[i].socket, "430 Incorrect password", 23, 0);
+                printf("INCORRECT PASSWORD\n");
+                strcpy(buf, "430 Incorrect password");
+                send(clients[i].socket, buf, sizeof(buf), 0);
               }
             }
           } else if (!strcmp(command, "PUT")) {
@@ -194,7 +205,8 @@ int main(int argc, char * argv[])
               // PUT file arg1 onto server
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              send(clients[i].socket, "530 Not logged in", 23, 0);
+              strcpy(buf, "530 Not logged in");
+              send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else if (!strcmp(command, "GET")) {
             printf("Entered GET\n");
@@ -202,17 +214,20 @@ int main(int argc, char * argv[])
               // GET file arg1 from server and send result back to client
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              send(clients[i].socket, "530 Not logged in", 23, 0);
+              strcpy(buf, "530 Not logged in");
+              send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
             if (clients[i].status == LOGGED_IN) {
               // system call and send result back to client
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              send(clients[i].socket, "530 Not logged in", 23, 0);
+              strcpy(buf, "530 Not logged in");
+              send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else {
-            send(clients[i].socket, "502 Command not found", 22, 0);
+            strcpy(buf, "502 Command not found");
+            send(clients[i].socket, buf, sizeof(buf), 0);
           }
         }
       }

@@ -11,6 +11,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define MAX_BUF 1024 // if we end up making a header file included by FTPserver.c and FTPclient.c, put this macro in there
+
 void callSystem(const char *command, const char *options);
 int changeDir(const char *input);
 
@@ -28,7 +30,7 @@ int main(int argc, char * argv[])
   int server_port = atoi(argv[2]);
   int sockfd, i;
   struct sockaddr_in addr;
-  char buf[1024];
+  char buf[MAX_BUF];
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Can't open socket\n");
@@ -45,7 +47,7 @@ int main(int argc, char * argv[])
     exit(EXIT_FAILURE);
   }
 
-  char input[1024];
+  char input[MAX_BUF];
   while (true) {
     bool server_request = false;
     
