@@ -10,11 +10,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "utils.h"
 
 #define MAX_BUF 1024 // if we end up making a header file included by FTPserver.c and FTPclient.c, put this macro in there
 
-void callSystem(const char *command, const char *options);
-int changeDir(const char *input);
+void callClientSystem(const char *command, const char *options);
 
 int main(int argc, char * argv[])
 {
@@ -68,7 +68,7 @@ int main(int argc, char * argv[])
         write(sockfd, input, strlen(input+1));
       }
     } else if (!strcmp(command, "PASS")) {
-      printf("Entered PASSWORD\n");
+      // printf("Entered PASSWORD\n");
       if (!arg1) {  // No password provided
         printf("Please input password.\n");
       } else {
@@ -95,7 +95,7 @@ int main(int argc, char * argv[])
       server_request = true;
       write(sockfd, input, strlen(input+1));
     } else if (!strcmp(command, "!LS") || !strcmp(command, "!PWD")) {
-      callSystem(command, input);    
+      callClientSystem(command, input);    
     } else if (!strcmp(command, "!CD")) {
       changeDir(input);
     } else if (!strcmp(command, "QUIT")) {
@@ -108,14 +108,14 @@ int main(int argc, char * argv[])
         printf("Server closed connection\n");
         exit(EXIT_SUCCESS);
       }
-      printf("Server response: %s\n", input);
+      printf("Server response:\n%s\n", input);
     }
   }
 }
 
-void callSystem(const char *command, const char *input) {
+void callClientSystem(const char *command, const char *input) {
   char * options = strchr(input, ' ');
-  char shell_command[32];         // no particular reason for 64
+  char shell_command[32];         // 32 is enough space for options
   memset(&shell_command, 0, sizeof(shell_command));
   if (!strcmp(command, "!LS")) {
     strcat(shell_command, "ls");
@@ -126,24 +126,4 @@ void callSystem(const char *command, const char *input) {
     strcat(shell_command, options);
   }
   system(shell_command);
-}
-
-int changeDir(const char *input) {
-  int num_chars = strlen(input);
-  char command[num_chars];
-  strncpy(command, input, num_chars);
-  strtok(command, "\n");
-  const char * sep = strchr(command, ' ');
-  const char * path;
-  if (!sep) {
-    path = "/home";   // default to home directory
-  } else {
-    path = sep + 1;
-  }
-  if (chdir(path) == -1) {
-    printf("Error: %s\n", strerror(errno));
-    return EXIT_FAILURE;
-  } else {
-    return EXIT_SUCCESS;
-  }
 }

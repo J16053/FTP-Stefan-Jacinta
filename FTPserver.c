@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include "utils.h"
 
 #define MAX_CLIENTS 30
 #define NUM_USERS 4
@@ -22,6 +23,8 @@ struct user {
   char * username;
   char * password;
 } USERS[NUM_USERS] = {{"JACINTA", "AWESOME"}, {"STEFAN", "SUPER"}, {"YASIR", "ZAKI"}, {"THOMAS", "POTSCH"}};
+
+int callServerSystem(const char *command, const char* buf, char *response);
 
 int main(int argc, char * argv[])
 {
@@ -225,18 +228,29 @@ int main(int argc, char * argv[])
               }
               send(clients[i].socket, buf, sizeof(buf), 0);
             }
-          } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
+          } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
+            // printf("Entered LS or PWD\n");
             if (clients[i].status == LOGGED_IN) {
-              // system call and send result back to client
-              send(clients[i].socket, buf, num, 0); // echo the message back to client
+              char response[MAX_BUF];
+              memset(&response, 0, sizeof(response));
+              callServerSystem(command, buf, response);
+              strcpy(buf, response);
             } else {
               if (clients[i].status == USER_OK) {
                 strcpy(buf, "530 Password authentication is pending");
               } else {
                 strcpy(buf, "530 User authentication is pending");
               }
-              send(clients[i].socket, buf, sizeof(buf), 0);
             }
+            send(clients[i].socket, buf, sizeof(buf), 0);
+          } else if (!strcmp(command, "CD")) {
+            if (changeDir(buf) == EXIT_FAILURE) {
+              strcpy(buf, strerror(errno));
+            } else {
+              printf("250 Changed directory\n");
+              strcpy(buf, "250 Changed directory");
+            }
+            send(clients[i].socket, buf, sizeof(buf), 0);
           } else {
             strcpy(buf, "502 Invalid FTP command");
             send(clients[i].socket, buf, sizeof(buf), 0);
@@ -245,4 +259,42 @@ int main(int argc, char * argv[])
       }
     }
   }
+}
+
+int callServerSystem(const char *command, const char* buf, char *response) {
+
+  // create shell command
+  char * options = strchr(buf, ' ');
+  char shell_command[32];           // 32 is enough space for options
+  memset(&shell_command, 0, sizeof(shell_command));
+  if (!strcmp(command, "LS")) {
+    strcpy(shell_command, "ls ");
+  } else {
+    strcpy(shell_command, "pwd ");
+  }
+  if (options) {
+    strcat(shell_command, options);
+  }
+
+  // execute shell command
+  FILE *fp = popen(shell_command, "r");
+  if (!fp) {
+    return EXIT_FAILURE;
+    strcpy(response, strerror(errno));
+  }
+
+  // retrieve output and store in response
+  char line[128];
+  while (fgets(line, sizeof(line), fp)) {
+    strcat(response, line);
+  }
+
+  // check for error
+  if (pclose(fp) == -1) {
+    strcpy(response, strerror(errno));
+    return EXIT_FAILURE;
+  } 
+
+  // successful completion
+  return EXIT_SUCCESS;
 }
