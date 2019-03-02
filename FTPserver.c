@@ -185,7 +185,7 @@ int main(int argc, char * argv[])
             printf("Entered PASSWORD\n");
             // verify password
             if (clients[i].status != USER_OK) {
-              strcpy(buf, "530 Set USER first");
+              strcpy(buf, "530 User authentication is pending");
               send(clients[i].socket, buf, sizeof(buf), 0);
             } else {
               if (!strcmp(arg1, USERS[clients[i].user].password)) {
@@ -205,7 +205,11 @@ int main(int argc, char * argv[])
               // PUT file arg1 onto server
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              strcpy(buf, "530 Not logged in");
+              if (clients[i].status == USER_OK) {
+                strcpy(buf, "530 Password authentication is pending");
+              } else {
+                strcpy(buf, "530 User authentication is pending");
+              }
               send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else if (!strcmp(command, "GET")) {
@@ -214,7 +218,11 @@ int main(int argc, char * argv[])
               // GET file arg1 from server and send result back to client
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              strcpy(buf, "530 Not logged in");
+              if (clients[i].status == USER_OK) {
+                strcpy(buf, "530 Password authentication is pending");
+              } else {
+                strcpy(buf, "530 User authentication is pending");
+              }
               send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
@@ -222,11 +230,15 @@ int main(int argc, char * argv[])
               // system call and send result back to client
               send(clients[i].socket, buf, num, 0); // echo the message back to client
             } else {
-              strcpy(buf, "530 Not logged in");
+              if (clients[i].status == USER_OK) {
+                strcpy(buf, "530 Password authentication is pending");
+              } else {
+                strcpy(buf, "530 User authentication is pending");
+              }
               send(clients[i].socket, buf, sizeof(buf), 0);
             }
           } else {
-            strcpy(buf, "502 Command not found");
+            strcpy(buf, "502 Invalid FTP command");
             send(clients[i].socket, buf, sizeof(buf), 0);
           }
         }
