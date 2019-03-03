@@ -1,8 +1,18 @@
-FTPserver: FTPserver.c
-	gcc FTPserver.c -o FTPserver
+FTPserver: FTPserver.o utils.o
+	gcc FTPserver.o utils.o -o FTPserver
 
-FTPclient: FTPclient.c
-	gcc FTPclient.c -o FTPclient
+FTPclient: FTPclient.o utils.o
+	gcc FTPclient.o utils.o -o FTPclient
+	
+FTPserver.o: FTPserver.c utils.h
+	gcc -c FTPserver.c
+		
+FTPclient.o: FTPclient.c utils.h
+	gcc -c FTPclient.c
+	
+utils.o: utils.c utils.h
+	gcc -c utils.c
 
 clean:
-	rm FTPclient FTPserver
+	rm FTPclient FTPserver *.o
+	
