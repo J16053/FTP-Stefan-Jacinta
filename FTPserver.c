@@ -184,10 +184,13 @@ int main(int argc, char * argv[])
           } else if (!strcmp(command, "PASS")) {
             printf("Entered PASSWORD\n");
             // verify password
-            if (clients[i].status != USER_OK) {
+            if (clients[i].status == LOGGED_IN) {
+              strcpy(buf, "431 User already logged in");
+              send(clients[i].socket, buf, sizeof(buf), 0);
+            } else if (clients[i].status != USER_OK) {
               strcpy(buf, "530 User authentication is pending");
               send(clients[i].socket, buf, sizeof(buf), 0);
-            } else {
+            } else { // clients[i].status == USER_OK
               if (!strcmp(arg1, USERS[clients[i].user].password)) {
                 clients[i].status = LOGGED_IN;
                 printf("PASSWORD OK\n");
