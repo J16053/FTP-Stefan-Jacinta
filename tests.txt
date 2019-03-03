@@ -1,0 +1,20 @@
+Test Cases
+---
+
+- USER username
+  Currently, the server holds 4 users: STEFAN, JACINTA, YASIR, and THOMAS.
+  These users were used to verify the correct function of the status change
+  of the user. By default, once a client connects, it does not have an associated 
+  user field and has status 1 i.e., connected. When a correct username is 
+  sent to the server, the status is changed to 2 (i.e., username OK). Once 
+  a correct password is provided through the 'PASS password' command, the status
+  is changed to 2 (logged in). Then and only then will the user be able to perform
+  and of the FTP / system commands to retrieve information from the server. 
+  
+- PASS password
+  Each of the 4 aforementioned users have a corresponding password:
+    JACINTA has password AWESOME.
+    STEFAN has password SUPER.
+    YASIR has password ZAKI.
+    THOMAS has password POTSCH.
+    
