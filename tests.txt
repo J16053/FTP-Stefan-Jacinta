@@ -10,7 +10,14 @@ Test Cases
   a correct password is provided through the 'PASS password' command, the status
   is changed to 3 (logged in). Then and only then will the user be able to perform
   any of the FTP / system commands to retrieve information from the server. 
-  
+ 
+	- USER valid_username
+	[x]	Server responds with "331 Username OK, need password"
+	- USER invalid_username
+	[x]	Server responds with "430 Invalid username"
+	- USER (no_username)
+	[x]	Request not sent to server, display "Please input username."  
+
 - PASS password
   Each of the 4 aforementioned users have a corresponding password:
     JACINTA has password AWESOME.
@@ -18,3 +25,12 @@ Test Cases
     YASIR has password ZAKI.
     THOMAS has password POTSCH.
     
+	- PASS valid_password
+	[x] Server responds with "230 User logged in, proceed"
+	- PASS invalid_password
+	[x] Server responds with "430 Incorrect password"
+	- PASS (no_password)
+	[x] Request not sent to server, display "Please input password."
+	- PASS password (username not OK)
+	[x] Server responds with "530 User authentication is pending"
+
