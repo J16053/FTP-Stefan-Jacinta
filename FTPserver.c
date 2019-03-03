@@ -289,8 +289,8 @@ static int callServerSystem(const char *command, const char *buf, char *response
   // execute shell command
   FILE *fp = popen(shell_command, "r");
   if (!fp) {
-    return EXIT_FAILURE;
     strcpy(response, strerror(errno));
+    return EXIT_FAILURE;
   }
 
   // retrieve output and store in response
