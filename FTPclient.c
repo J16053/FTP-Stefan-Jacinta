@@ -12,11 +12,9 @@
 #include <unistd.h>
 #include "utils.h"
 
-#define MAX_BUF 1024 // if we end up making a header file included by FTPserver.c and FTPclient.c, put this macro in there
+static void callClientSystem(const char *command, const char *options);
 
-void callClientSystem(const char *command, const char *options);
-
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
   // require user to input server address and server port
   if (argc < 3) {
@@ -55,8 +53,8 @@ int main(int argc, char * argv[])
     fgets(buf, sizeof(buf), stdin);
     strncpy(input, buf, sizeof(buf));
     
-    char * command = strtok(buf, " \n");
-    char * arg1 = strtok(NULL, " ");
+    char *command = strtok(buf, " \n");
+    char *arg1 = strtok(NULL, " ");
     
     // printf("%s\n", input); // uncomment to view input
     if (!strcmp(command, "USER")) {
@@ -113,8 +111,8 @@ int main(int argc, char * argv[])
   }
 }
 
-void callClientSystem(const char *command, const char *input) {
-  char * options = strchr(input, ' ');
+static void callClientSystem(const char *command, const char *input) {
+  char *options = strchr(input, ' ');
   char shell_command[32];         // 32 is enough space for options
   memset(&shell_command, 0, sizeof(shell_command));
   if (!strcmp(command, "!LS")) {

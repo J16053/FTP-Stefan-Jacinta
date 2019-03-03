@@ -17,16 +17,15 @@
 #define CONNECTED 1
 #define USER_OK 2
 #define LOGGED_IN 3
-#define MAX_BUF 1024
 
 struct user {
-  char * username;
-  char * password;
+  char *username;
+  char *password;
 } USERS[NUM_USERS] = {{"JACINTA", "AWESOME"}, {"STEFAN", "SUPER"}, {"YASIR", "ZAKI"}, {"THOMAS", "POTSCH"}};
 
-int callServerSystem(const char *command, const char* buf, char *response);
+static int callServerSystem(const char *command, const char *buf, char *response);
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
   int master_socket, accepted_socket, client_socket;
   struct sockaddr_in server_addr, client_addr;
@@ -157,8 +156,8 @@ int main(int argc, char * argv[])
           char input[MAX_BUF];
           strncpy(input, buf, sizeof(buf));
           
-          char * command = strtok(input, " \n");
-          char * arg1 = strtok(NULL, " ");
+          char *command = strtok(input, " \n");
+          char *arg1 = strtok(NULL, " ");
           
           // printf("%s\n", input); // uncomment to view input
           if (!strcmp(command, "USER")) {
@@ -247,11 +246,19 @@ int main(int argc, char * argv[])
             }
             send(clients[i].socket, buf, sizeof(buf), 0);
           } else if (!strcmp(command, "CD")) {
-            if (changeDir(buf) == EXIT_FAILURE) {
-              strcpy(buf, strerror(errno));
+            if (clients[i].status == LOGGED_IN) {
+              if (changeDir(buf) == EXIT_FAILURE) {
+                strcpy(buf, strerror(errno));
+              } else {
+                printf("250 Changed directory\n");
+                strcpy(buf, "250 Changed directory");
+              }
             } else {
-              printf("250 Changed directory\n");
-              strcpy(buf, "250 Changed directory");
+              if (clients[i].status == USER_OK) {
+                strcpy(buf, "530 Password authentication is pending");
+              } else {
+                strcpy(buf, "530 User authentication is pending");
+              }
             }
             send(clients[i].socket, buf, sizeof(buf), 0);
           } else {
@@ -264,10 +271,10 @@ int main(int argc, char * argv[])
   }
 }
 
-int callServerSystem(const char *command, const char* buf, char *response) {
+static int callServerSystem(const char *command, const char *buf, char *response) {
 
   // create shell command
-  char * options = strchr(buf, ' ');
+  char *options = strchr(buf, ' ');
   char shell_command[32];           // 32 is enough space for options
   memset(&shell_command, 0, sizeof(shell_command));
   if (!strcmp(command, "LS")) {
