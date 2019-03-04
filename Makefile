@@ -1,8 +1,10 @@
 FTPserver: FTPserver.o utils.o
-	gcc FTPserver.o utils.o -o FTPserver
+	mkdir -p bin
+	gcc FTPserver.o utils.o -o bin/FTPserver
 
 FTPclient: FTPclient.o utils.o
-	gcc FTPclient.o utils.o -o FTPclient
+	mkdir -p bin
+	gcc FTPclient.o utils.o -o bin/FTPclient
 	
 FTPserver.o: FTPserver.c utils.h
 	gcc -c FTPserver.c

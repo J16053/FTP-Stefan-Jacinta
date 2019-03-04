@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 #define MAX_BUF 1024
+#define MAX_COMMAND_SIZE 4
 
 int changeDir(const char *input);
-size_t first_not_space(const char* str);
 
 #endif

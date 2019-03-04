@@ -155,7 +155,8 @@ int main(int argc, char *argv[])
       char input[MAX_BUF];
       strncpy(input, buf, sizeof(buf));
       
-      char *command = strtok(input, " \n");
+      strtok(input, "\n");
+      char *command = strtok(input, " ");
       char *arg1 = strtok(NULL, " ");
       
       // printf("%s\n", input); // uncomment to view input

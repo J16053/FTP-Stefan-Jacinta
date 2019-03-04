@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
   int server_port = atoi(argv[2]);
   int sockfd, i;
   struct sockaddr_in addr;
-  char buf[MAX_BUF];
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     printf("Can't open socket\n");
@@ -45,15 +44,16 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
+  char buf[MAX_BUF];
   char input[MAX_BUF];
   while (true) {
     bool server_request = false;
     
     printf("ftp > ");
     fgets(buf, sizeof(buf), stdin);
-    strncpy(input, buf, sizeof(buf));
-    
-    char *command = strtok(buf, " \n");
+    strtok(buf, "\n");  // remove newline character
+    strcpy(input, buf);
+    char *command = strtok(input, " ");
     char *arg1 = strtok(NULL, " ");
     
     // printf("%s\n", input); // uncomment to view input
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
         printf("Please input username.\n");
       } else {
         server_request = true;
-        write(sockfd, input, strlen(input+1));
+        write(sockfd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "PASS")) {
       // printf("Entered PASSWORD\n");
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         printf("Please input password.\n");
       } else {
         server_request = true;
-        write(sockfd, input, strlen(input+1));
+        write(sockfd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "PUT")) {
       printf("Entered PUT\n");
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         printf("Please input filename from client.\n");
       } else {
         server_request = true;
-        write(sockfd, input, strlen(input+1));
+        write(sockfd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "GET")) {
       printf("Entered GET\n");
@@ -87,26 +87,26 @@ int main(int argc, char *argv[])
         printf("Please input filename from host.\n");
       } else {
         server_request = true;
-        write(sockfd, input, strlen(input+1));
+        write(sockfd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
       server_request = true;
-      write(sockfd, input, strlen(input+1));
+      write(sockfd, buf, strlen(buf));
     } else if (!strcmp(command, "!LS") || !strcmp(command, "!PWD")) {
-      callClientSystem(command, input);    
+      callClientSystem(command, buf);    
     } else if (!strcmp(command, "!CD")) {
-      changeDir(input);
+      changeDir(buf);
     } else if (!strcmp(command, "QUIT")) {
       exit(EXIT_SUCCESS);
     } else {
       fprintf(stderr, "Command not found\n");
     }
     if (server_request) {
-      if (read(sockfd, input, sizeof(input)) == 0) {
+      if (read(sockfd, buf, sizeof(buf)) == 0) {
         printf("Server closed connection\n");
         exit(EXIT_SUCCESS);
       }
-      printf("Server response:\n%s\n", input);
+      printf("Server response:\n%s\n", buf);
     }
   }
 }
