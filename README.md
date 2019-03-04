@@ -1,5 +1,4 @@
 # FTP-Stefan-Jacinta
-<<<<<<< HEAD
 Networks Project 1: File Transfer Protocol (FTP)
 
 This project implements a simplified version of FTP using the client/server model and a persistent TCP connection used as a control channel. We used [Thomas' template code](https://github.com/tpoetsch/concurrent_client_server) to set up a server that can handle simultaneous users' requests. Once the client decides to start a data stream, which could be either uploading a file to the server or downloading a file from the server, a new TCP connection is established on a different port for the data transfer. Once the file transfer ends, the TCP connection of the data transfer is closed.
@@ -47,4 +46,4 @@ Commands to implement
 - [x] **PWD** this command displays the current server directory
 - [x] **!PWD** this command displays the current client directory
 - [x] **QUIT** this command quits the FTP session and closes the control TCP connection
->>>>>>> c371c792177a92e9c89c3aefb5ff56e03d75198f
+
