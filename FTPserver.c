@@ -133,140 +133,102 @@ int main(int argc, char *argv[])
     // loop through all clients and check for activity on all client sockets
     for (i = 0; i < MAX_CLIENTS; i++) {
 
-      // skip if array position is not used
-      if (clients[i].socket < 0) {
+      // skip if array position is not used or inactive
+      if (clients[i].socket < 0 || !FD_ISSET(clients[i].socket, &read_fd_set)) {
         continue;
       }
 
-      // check for activity
-      if (FD_ISSET(clients[i].socket, &read_fd_set)) {
-        
-        memset(buf, 0, sizeof(buf)); //reset the buffer
-        int num = recv(clients[i].socket, buf, MAX_BUF, 0); // read from socket
-        
-        // client closed the connection
-        if (num == 0) {
-          printf("[%d]Closing connection\n", i);
-          close(clients[i].socket);
-          FD_CLR(clients[i].socket, &read_fd_set); // clear the file descriptor set for client[i]
-          clients[i].socket = UNINITIATED;
-          clients[i].status = UNINITIATED;
-        } else { // client sent a server request
-          printf("[%d]Received: %s\n", i, buf);
-          char input[MAX_BUF];
-          strncpy(input, buf, sizeof(buf));
-          
-          char *command = strtok(input, " \n");
-          char *arg1 = strtok(NULL, " ");
-          
-          // printf("%s\n", input); // uncomment to view input
-          if (!strcmp(command, "USER")) {
-            printf("Entered USERNAME\n");
-            // verify username
-            if (clients[i].status == USER_OK) {
-              clients[i].status = CONNECTED;
-              clients[i].user = UNINITIATED;
-            }
-            for (int u = 0; u < NUM_USERS; u++) {
-              printf("Checking user: %d\n", u);
-              if (!strcmp(arg1, USERS[u].username)) {
-                printf("VALID USERNAME\n");
-                clients[i].status = USER_OK;
-                clients[i].user = u;
-                strcpy(buf, "331 Username OK, need password");
-                send(clients[i].socket, buf, sizeof(buf), 0);
-                break;
-              }
-            }
-            if (clients[i].status != USER_OK) {
-              strcpy(buf, "430 Invalid username");
-              send(clients[i].socket, buf, sizeof(buf), 0);
-              printf("INVALID USERNAME\n");
-            }
-          } else if (!strcmp(command, "PASS")) {
-            printf("Entered PASSWORD\n");
-            // verify password
-            if (clients[i].status == LOGGED_IN) {
-              strcpy(buf, "431 User already logged in");
-              send(clients[i].socket, buf, sizeof(buf), 0);
-            } else if (clients[i].status != USER_OK) {
-              strcpy(buf, "530 User authentication is pending");
-              send(clients[i].socket, buf, sizeof(buf), 0);
-            } else { // clients[i].status == USER_OK
-              if (!strcmp(arg1, USERS[clients[i].user].password)) {
-                clients[i].status = LOGGED_IN;
-                printf("PASSWORD OK\n");
-                strcpy(buf, "230 User logged in, proceed");
-                send(clients[i].socket, buf, sizeof(buf), 0);
-              } else {
-                printf("INCORRECT PASSWORD\n");
-                strcpy(buf, "430 Incorrect password");
-                send(clients[i].socket, buf, sizeof(buf), 0);
-              }
-            }
-          } else if (!strcmp(command, "PUT")) {
-            printf("Entered PUT\n");
-            if (clients[i].status == LOGGED_IN) {
-              // PUT file arg1 onto server
-              send(clients[i].socket, buf, num, 0); // echo the message back to client
-            } else {
-              if (clients[i].status == USER_OK) {
-                strcpy(buf, "530 Password authentication is pending");
-              } else {
-                strcpy(buf, "530 User authentication is pending");
-              }
-              send(clients[i].socket, buf, sizeof(buf), 0);
-            }
-          } else if (!strcmp(command, "GET")) {
-            printf("Entered GET\n");
-            if (clients[i].status == LOGGED_IN) {
-              // GET file arg1 from server and send result back to client
-              send(clients[i].socket, buf, num, 0); // echo the message back to client
-            } else {
-              if (clients[i].status == USER_OK) {
-                strcpy(buf, "530 Password authentication is pending");
-              } else {
-                strcpy(buf, "530 User authentication is pending");
-              }
-              send(clients[i].socket, buf, sizeof(buf), 0);
-            }
-          } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
-            // printf("Entered LS or PWD\n");
-            if (clients[i].status == LOGGED_IN) {
-              char response[MAX_BUF];
-              memset(&response, 0, sizeof(response));
-              callServerSystem(command, buf, response);
-              strcpy(buf, response);
-            } else {
-              if (clients[i].status == USER_OK) {
-                strcpy(buf, "530 Password authentication is pending");
-              } else {
-                strcpy(buf, "530 User authentication is pending");
-              }
-            }
-            send(clients[i].socket, buf, sizeof(buf), 0);
-          } else if (!strcmp(command, "CD")) {
-            if (clients[i].status == LOGGED_IN) {
-              if (changeDir(buf) == EXIT_FAILURE) {
-                strcpy(buf, strerror(errno));
-              } else {
-                printf("250 Changed directory\n");
-                strcpy(buf, "250 Changed directory");
-              }
-            } else {
-              if (clients[i].status == USER_OK) {
-                strcpy(buf, "530 Password authentication is pending");
-              } else {
-                strcpy(buf, "530 User authentication is pending");
-              }
-            }
-            send(clients[i].socket, buf, sizeof(buf), 0);
-          } else {
-            strcpy(buf, "502 Invalid FTP command");
-            send(clients[i].socket, buf, sizeof(buf), 0);
+      memset(buf, 0, sizeof(buf)); //reset the buffer
+      int num = recv(clients[i].socket, buf, MAX_BUF, 0); // read from socket
+      
+      // client closed the connection
+      if (num == 0) {
+        printf("[%d]Closing connection\n", i);
+        close(clients[i].socket);
+        FD_CLR(clients[i].socket, &read_fd_set); // clear the file descriptor set for client[i]
+        clients[i].socket = UNINITIATED;
+        clients[i].status = UNINITIATED;
+        continue;
+      } 
+      // client sent a server request
+      printf("[%d]Received: %s\n", i, buf);
+      char input[MAX_BUF];
+      strncpy(input, buf, sizeof(buf));
+      
+      char *command = strtok(input, " \n");
+      char *arg1 = strtok(NULL, " ");
+      
+      // printf("%s\n", input); // uncomment to view input
+      if (!strcmp(command, "USER")) {
+        printf("[%d]Entered USERNAME\n", i);
+        // verify username
+        if (clients[i].status == USER_OK) {
+          clients[i].status = CONNECTED;
+          clients[i].user = UNINITIATED;
+        }
+        for (int u = 0; u < NUM_USERS; u++) {
+          if (!strcmp(arg1, USERS[u].username)) {
+            printf("[%d]VALID USERNAME\n", i);
+            clients[i].status = USER_OK;
+            clients[i].user = u;
+            strcpy(buf, "331 Username OK, need password");
+            break;
           }
         }
+        if (clients[i].status != USER_OK) {
+          strcpy(buf, "430 Invalid username");
+          printf("[%d]INVALID USERNAME\n", i);
+        }
+      } else if (!strcmp(command, "PASS")) {
+        printf("[%d]Entered PASSWORD\n", i);
+        // verify password
+        if (clients[i].status == LOGGED_IN) {
+          strcpy(buf, "431 User already logged in");
+        } else if (clients[i].status != USER_OK) {
+          strcpy(buf, "530 User authentication is pending");
+        } else { // clients[i].status == USER_OK
+          if (!strcmp(arg1, USERS[clients[i].user].password)) {
+            clients[i].status = LOGGED_IN;
+            printf("[%d]PASSWORD OK\n", i);
+            strcpy(buf, "230 User logged in, proceed");
+          } else {
+            printf("[%d]INCORRECT PASSWORD\n", i);
+            strcpy(buf, "430 Incorrect password");
+          }
+        }
+      } else if (clients[i].status != LOGGED_IN) {
+        if (clients[i].status == USER_OK) {
+          strcpy(buf, "530 Password authentication is pending");
+        } else {
+          strcpy(buf, "530 User authentication is pending");
+        }
+      } else {
+        if (!strcmp(command, "PUT")) {
+          printf("[%d]Entered PUT\n", i);
+          // PUT file arg1 onto server
+          // for now echo the message back to client by not modifying buf
+        } else if (!strcmp(command, "GET")) {
+          printf("[%d]Entered GET\n", i);
+          // GET file arg1 from server and send result back to client
+          // for now echo the message back to client by not modifying buf
+        } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
+          printf("[%d]Entered LS or PWD\n", i);
+          char response[MAX_BUF];
+          memset(&response, 0, sizeof(response));
+          callServerSystem(command, buf, response);
+          strcpy(buf, response);
+        } else if (!strcmp(command, "CD")) {
+          printf("[%d]Entered CD\n", i);
+          if (changeDir(buf) == EXIT_FAILURE) {
+            strcpy(buf, strerror(errno));
+          } else {
+            strcpy(buf, "250 Changed directory");
+          }
+        } else {
+          strcpy(buf, "502 Invalid FTP command");
+        }
       }
+      send(clients[i].socket, buf, sizeof(buf), 0);
     }
   }
 }
