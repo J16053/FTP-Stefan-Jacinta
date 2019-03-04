@@ -19,10 +19,3 @@ int changeDir(const char *input) {
     return EXIT_SUCCESS;
   }
 }
-
-// returns index to first non-space character in str
-size_t first_not_space(const char* str) {
-  int i = 0;
-  while (isspace(str[i])) { ++i; }
-  return i;
-}
