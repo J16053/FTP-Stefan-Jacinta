@@ -38,7 +38,6 @@ int main(int argc, char *argv[])
     int socket; // socket descriptor
     int status; // -1 = not connected, 1 = connected, 2 = username OK, 3 = logged in
     int user; // user index
-    char pwd[MAX_BUF]; // working directory of client
   } clients[MAX_CLIENTS];
 
   // initialize array of clients
@@ -46,8 +45,6 @@ int main(int argc, char *argv[])
     clients[i].socket = UNINITIATED;
     clients[i].status = UNINITIATED;
     clients[i].user = UNINITIATED;
-    callServerSystem("PWD", NULL, buf);
-    strcpy(clients[i].pwd, buf);  // set default working directory of each client to the place where the server starts
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
