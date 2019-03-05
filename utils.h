@@ -12,6 +12,6 @@
 #define MAX_BUF 1024
 #define MAX_COMMAND_SIZE 4
 
-int changeDir(const char *input);
+int changeDir(const char *path);
 
 #endif
