@@ -93,9 +93,9 @@ int main(int argc, char *argv[])
       server_request = true;
       write(sockfd, buf, strlen(buf));
     } else if (!strcmp(command, "!LS") || !strcmp(command, "!PWD")) {
-      callClientSystem(command, buf);    
+      callClientSystem(command, arg1);    
     } else if (!strcmp(command, "!CD")) {
-      changeDir(buf);
+      changeDir(arg1);
     } else if (!strcmp(command, "QUIT")) {
       exit(EXIT_SUCCESS);
     } else {
@@ -111,14 +111,12 @@ int main(int argc, char *argv[])
   }
 }
 
-static void callClientSystem(const char *command, const char *input) {
-  char *options = strchr(input, ' ');
+static void callClientSystem(const char *command, const char *options) {
   char shell_command[32];         // 32 is enough space for options
-  memset(&shell_command, 0, sizeof(shell_command));
   if (!strcmp(command, "!LS")) {
-    strcat(shell_command, "ls");
+    strcpy(shell_command, "ls ");
   } else {
-    strcat(shell_command, "pwd");
+    strcpy(shell_command, "pwd ");
   }
   if (options) {
     strcat(shell_command, options);

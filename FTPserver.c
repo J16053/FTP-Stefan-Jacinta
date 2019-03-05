@@ -23,7 +23,7 @@ struct user {
   char *password;
 } USERS[NUM_USERS] = {{"JACINTA", "AWESOME"}, {"STEFAN", "SUPER"}, {"YASIR", "ZAKI"}, {"THOMAS", "POTSCH"}};
 
-static int callServerSystem(const char *command, const char *buf, char *response);
+static int callServerSystem(const char *command, const char *options, char *response);
 
 int main(int argc, char *argv[])
 {
@@ -33,10 +33,12 @@ int main(int argc, char *argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
+  
   struct client {
     int socket; // socket descriptor
     int status; // -1 = not connected, 1 = connected, 2 = username OK, 3 = logged in
     int user; // user index
+    char pwd[MAX_BUF]; // working directory of client
   } clients[MAX_CLIENTS];
 
   // initialize array of clients
@@ -44,6 +46,8 @@ int main(int argc, char *argv[])
     clients[i].socket = UNINITIATED;
     clients[i].status = UNINITIATED;
     clients[i].user = UNINITIATED;
+    callServerSystem("PWD", NULL, buf);
+    strcpy(clients[i].pwd, buf);  // set default working directory of each client to the place where the server starts
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -214,13 +218,10 @@ int main(int argc, char *argv[])
           // for now echo the message back to client by not modifying buf
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
           printf("[%d]Entered LS or PWD\n", i);
-          char response[MAX_BUF];
-          memset(&response, 0, sizeof(response));
-          callServerSystem(command, buf, response);
-          strcpy(buf, response);
+          callServerSystem(command, arg1, buf);
         } else if (!strcmp(command, "CD")) {
           printf("[%d]Entered CD\n", i);
-          if (changeDir(buf) == EXIT_FAILURE) {
+          if (changeDir(arg1) == EXIT_FAILURE) {
             strcpy(buf, strerror(errno));
           } else {
             strcpy(buf, "250 Changed directory");
@@ -234,12 +235,10 @@ int main(int argc, char *argv[])
   }
 }
 
-static int callServerSystem(const char *command, const char *buf, char *response) {
+static int callServerSystem(const char *command, const char *options, char *response) {
 
   // create shell command
-  char *options = strchr(buf, ' ');
   char shell_command[32];           // 32 is enough space for options
-  memset(&shell_command, 0, sizeof(shell_command));
   if (!strcmp(command, "LS")) {
     strcpy(shell_command, "ls ");
   } else {
@@ -257,6 +256,7 @@ static int callServerSystem(const char *command, const char *buf, char *response
   }
 
   // retrieve output and store in response
+  strcpy(response, "");   // sets a null terminator
   char line[128];
   while (fgets(line, sizeof(line), fp)) {
     strcat(response, line);
