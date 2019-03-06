@@ -38,13 +38,17 @@ int main(int argc, char *argv[])
     int socket; // socket descriptor
     int status; // -1 = not connected, 1 = connected, 2 = username OK, 3 = logged in
     int user; // user index
+    char work_dir[MAX_BUF]; 
   } clients[MAX_CLIENTS];
 
+  
   // initialize array of clients
+  callServerSystem("PWD", NULL, buf);  // default working directory of all clients is initial working directory of server
   for (i = 0; i < MAX_CLIENTS; i++) {
     clients[i].socket = UNINITIATED;
     clients[i].status = UNINITIATED;
     clients[i].user = UNINITIATED;
+    strcpy(clients[i].work_dir, buf);
   }
 
   master_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -215,12 +219,16 @@ int main(int argc, char *argv[])
           // for now echo the message back to client by not modifying buf
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
           printf("[%d]Entered LS or PWD\n", i);
+          changeDir(clients[i].work_dir);  // change server directory to client session working directory
           callServerSystem(command, arg1, buf);
         } else if (!strcmp(command, "CD")) {
           printf("[%d]Entered CD\n", i);
+          changeDir(clients[i].work_dir);  // change server directory to client session working directory
           if (changeDir(arg1) == EXIT_FAILURE) {
             strcpy(buf, strerror(errno));
-          } else {
+          } else { // update work_dir field of client
+            callServerSystem("PWD", NULL, buf);
+            strcpy(clients[i].work_dir, buf);
             strcpy(buf, "250 Changed directory");
           }
         } else {
@@ -258,6 +266,8 @@ static int callServerSystem(const char *command, const char *options, char *resp
   while (fgets(line, sizeof(line), fp)) {
     strcat(response, line);
   }
+  char *newlineChar = strrchr(response, '\n');
+  *newlineChar = '\0';  
 
   // check for error
   if (pclose(fp) == -1) {
