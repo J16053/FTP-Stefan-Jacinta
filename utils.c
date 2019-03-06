@@ -8,7 +8,7 @@ int changeDir(const char *path) {
     response = chdir(path);
   }
   if (response == -1) {
-    perror("Error: ");
+    perror("Error");
     return EXIT_FAILURE;
   } else {
     return EXIT_SUCCESS;
