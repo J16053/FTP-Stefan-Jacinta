@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
+  socklen_t len = sizeof(client_addr);
   
   struct client {
     int socket; // socket descriptor
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
 
   int reuse = 1;
   setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-
+  memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(port);
@@ -108,7 +109,6 @@ int main(int argc, char *argv[])
     if (FD_ISSET(master_socket, &read_fd_set)) {
 
       // a client tries to connect
-      socklen_t len = sizeof(client_addr);
       if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
           fprintf(stderr, "Can't accept connection\n");
           exit(EXIT_FAILURE);
@@ -210,9 +210,27 @@ int main(int argc, char *argv[])
         }
       } else {
         if (!strcmp(command, "PUT")) {
-          printf("[%d]Entered PUT\n", i);
-          // PUT file arg1 onto server
-          // for now echo the message back to client by not modifying buf
+          changeDir(clients[i].work_dir);
+          printf("Changed directory to %s\n", clients[i].work_dir);
+          FILE * file = fopen(arg1, "w");
+          if (file == NULL) {
+            strcpy(buf, "Error opening file for writing"); // include code here
+          } else {
+            // accept incoming connection request: but will this break if another client tries to connect at the same time?
+            if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
+              fprintf(stderr, "Can't accept connection\n");
+              exit(EXIT_FAILURE);
+            }
+            int bytes_received = 1;
+            char buffer[MAX_BUF];
+            while (bytes_received > 0) {
+              bytes_received = read(accepted_socket, buffer, sizeof(buffer));
+              fprintf(file, "%s", buffer);
+            }
+            fclose(file);
+            close(accepted_socket);
+            strcpy(buf, "File uploaded to server");
+          }
         } else if (!strcmp(command, "GET")) {
           printf("[%d]Entered GET\n", i);
           // GET file arg1 from server and send result back to client

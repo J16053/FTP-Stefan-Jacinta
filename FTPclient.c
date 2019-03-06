@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     printf("Can't connect\n");
     exit(EXIT_FAILURE);
   }
-
   char buf[MAX_BUF];
   char input[MAX_BUF];
   while (true) {
@@ -74,12 +73,41 @@ int main(int argc, char *argv[])
         write(sockfd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "PUT")) {
-      printf("Entered PUT\n");
       if (!arg1) {  // No filename provided
         printf("Please input filename from client.\n");
       } else {
         server_request = true;
-        write(sockfd, buf, strlen(buf));
+        FILE * file = fopen(arg1, "r");
+        if (file == NULL) {
+          perror("Error opening file");
+        } else {
+          write(sockfd, buf, strlen(buf));
+          // should I reuse buf here?
+          // read line by line and send or read all and send? idk how to read all
+          // Set up TCP connection
+          int data_sock_fd;
+          if ((data_sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            printf("Can't open socket\n");
+            exit(EXIT_FAILURE);
+          }
+          int connected;
+          if ((connected = connect(data_sock_fd, (struct sockaddr *)&addr, sizeof(addr))) < 0) {
+            printf("Can't connect\n");
+            exit(EXIT_FAILURE);
+          } else if (connected == 0) {
+            char buffer[MAX_BUF];
+            while(fgets(buffer, sizeof(buffer), file) != NULL) {
+              if (write(data_sock_fd, buffer, sizeof(buffer)) < 0) {
+                perror("Error writing to socket");
+              }
+            }
+            if (ferror(file)) {
+              perror("Error");
+            }
+            fclose(file);
+            close(data_sock_fd);
+          }
+        }
       }
     } else if (!strcmp(command, "GET")) {
       printf("Entered GET\n");
