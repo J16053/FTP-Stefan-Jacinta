@@ -71,56 +71,55 @@ struct serverSocket serverSocketSetup(const int port, int reuse) {
 }
 
 int putFile(int data_fd, const char *file_name) {
-  // server_request = true;
-  // FILE * file = fopen(arg1, "r");
-  // if (file == NULL) {
-  //   perror("Error opening file");
-  // } else {
-  //   write(sockfd, buf, strlen(buf));
-  //   int data_sock_fd;
-  //   if ((data_sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-  //     printf("Can't open socket\n");
-  //     exit(EXIT_FAILURE);
-  //   }
-  //   int connected;
-  //   if ((connected = connect(data_sock_fd, (struct sockaddr *)&addr, sizeof(addr))) < 0) {
-  //     printf("Can't connect\n");
-  //     exit(EXIT_FAILURE);
-  //   } else if (connected == 0) {
-  //     char buffer[MAX_BUF];
-  //     while(fgets(buffer, sizeof(buffer), file) != NULL) {
-  //       if (write(data_sock_fd, buffer, sizeof(buffer)) < 0) {
-  //         perror("Error writing to socket");
-  //       }
-  //     }
-  //     if (ferror(file)) {
-  //       perror("Error");
-  //     }
-  //     fclose(file);
-  //     close(data_sock_fd);
-  //   }
-  // }
-  return EXIT_FAILURE;
+  
+  // open file to send
+  int file_fd = open(file_name, O_RDONLY);
+  
+  // check for errors
+  if (file_fd < 0) {
+    perror("Error opening file");
+  } 
+    
+  // retrieve stats of file 
+  struct stat st;  
+  fstat(file_fd, &st);
+  
+  // send file
+  int sent_bytes = sendfile(data_fd, file_fd, NULL, st.st_size);
+  
+  // check for errors in sending file
+  if (sent_bytes != st.st_size) {
+    perror("Failed to transfer file.");
+    return EXIT_FAILURE;
+  } 
+  
+  // close the file and data socket
+  close(data_fd);
+  close(file_fd);
+  return EXIT_SUCCESS;
 }
 
 int getFile(int data_fd, const char *file_name) {
-  // FILE * file = fopen(arg1, "w");
-  // if (file == NULL) {
-  //   strcpy(buf, "Error opening file for writing"); // include code here
-  // } else {
-  //   // accept incoming connection request: but will this break if another client tries to connect at the same time?
-  //   if ((accepted_socket = accept(master_socket.fd, (struct sockaddr *)(&client_addr), &master_socket.len)) < 0) {
-  //     fprintf(stderr, "Can't accept connection\n");
-  //     exit(EXIT_FAILURE);
-  //   }
-  //   int bytes_received = 1;
-  //   char buffer[MAX_BUF];
-  //   while (bytes_received > 0) {
-  //     bytes_received = read(accepted_socket, buffer, sizeof(buffer));
-  //     fprintf(file, "%s", buffer);
-  //   }
-  //   fclose(file);
-  //   close(accepted_socket);
-  //   strcpy(buf, "File uploaded to server");
+  
+  // open for for write
+  FILE *file = fopen(file_name, "w");
+  
+  // check for errors when opening file to write
+  if (file == NULL) {
+    perror("Error opening file for writing");
     return EXIT_FAILURE;
+  } 
+  
+  // write data until nothing else is recieved
+  int bytes_received = 1;
+  char buffer[MAX_BUF];
+  while (bytes_received > 0) {
+    bytes_received = read(data_fd, buffer, sizeof(buffer));
+    fprintf(file, "%s", buffer);
+  }
+  
+  // close the file and data socket
+  fclose(file);
+  close(data_fd);
+  return EXIT_SUCCESS;
 }

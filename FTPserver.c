@@ -252,8 +252,12 @@ static int callServerSystem(const char *command, const char *options, char *resp
   while (fgets(line, sizeof(line), fp)) {
     strcat(response, line);
   }
+  
+  // remove extra newline
   char *newlineChar = strrchr(response, '\n');
-  *newlineChar = '\0';  
+  if (newlineChar) {
+    *newlineChar = '\0';  
+  }
 
   // check for error
   if (pclose(fp) == -1) {
