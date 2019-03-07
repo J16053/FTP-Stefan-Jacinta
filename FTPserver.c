@@ -1,14 +1,3 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
 #include "utils.h"
 
 #define MAX_CLIENTS 30
@@ -27,13 +16,12 @@ static int callServerSystem(const char *command, const char *options, char *resp
 
 int main(int argc, char *argv[])
 {
-  int master_socket, accepted_socket, client_socket;
-  struct sockaddr_in server_addr, client_addr;
-  char buf[MAX_BUF];
+  int accepted_socket;
+  struct sockaddr_in client_addr;
   fd_set read_fd_set;
   int maxfd, i;
   int port = 9999;
-  socklen_t len = sizeof(client_addr);
+  char buf[MAX_BUF];
   
   struct client {
     int socket; // socket descriptor
@@ -52,45 +40,23 @@ int main(int argc, char *argv[])
     strcpy(clients[i].work_dir, buf);
   }
 
-  master_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (master_socket < 0) {
-    fprintf(stderr, "Can't open socket\n");
-    exit(EXIT_FAILURE);
-  }
-
-  int reuse = 1;
-  setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-  memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(port);
-
-  if (bind(master_socket, (struct sockaddr *) &server_addr, sizeof(server_addr))) {
-    close(master_socket);
-    fprintf(stderr, "Can't bind socket\n");
-    exit(EXIT_FAILURE);
-  }
-  
-  if (listen(master_socket, 5) < 0) {
-    close(master_socket);
-    fprintf(stderr, "Can't listen on socket\n");
-    exit(EXIT_FAILURE);
-  }
+  int reuse;
+  struct serverSocket master_socket = serverSocketSetup(port, reuse);
 
   while (1) {
 
     // clear the socket set
     FD_ZERO(&read_fd_set);
  
-    // add master socket to file descriptor set
-    FD_SET(master_socket, &read_fd_set);
-    maxfd = master_socket;
+    // add master_socket socket to file descriptor set
+    FD_SET(master_socket.fd, &read_fd_set);
+    maxfd = master_socket.fd;
 
     // add child sockets to set
     for (i = 0; i < MAX_CLIENTS; i++) {
         
         // get socket descriptor
-        client_socket = clients[i].socket;
+        int client_socket = clients[i].socket;
         
         // if socket descriptor is valid, then add it to read list
         if(client_socket > 0) {
@@ -106,10 +72,10 @@ int main(int argc, char *argv[])
     select(maxfd+1, &read_fd_set, NULL, NULL, NULL);
     
     // check for activity on the master_socket (if so, then it must be an incoming request)
-    if (FD_ISSET(master_socket, &read_fd_set)) {
+    if (FD_ISSET(master_socket.fd, &read_fd_set)) {
 
       // a client tries to connect
-      if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
+      if ((accepted_socket = accept(master_socket.fd, (struct sockaddr *)(&client_addr), &master_socket.len)) < 0) {
           fprintf(stderr, "Can't accept connection\n");
           exit(EXIT_FAILURE);
       }
@@ -209,32 +175,34 @@ int main(int argc, char *argv[])
           strcpy(buf, "530 User authentication is pending");
         }
       } else {
-        if (!strcmp(command, "PUT")) {
+        if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
+          // change directory to client working directory
           changeDir(clients[i].work_dir);
-          printf("Changed directory to %s\n", clients[i].work_dir);
-          FILE * file = fopen(arg1, "w");
-          if (file == NULL) {
-            strcpy(buf, "Error opening file for writing"); // include code here
+          
+          // get socket information
+          struct sockaddr_in address;
+    	    socklen_t addrlen = sizeof(address);
+          
+          // store address of the client connected to the socket
+    	    getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen);
+    	    char data_ip[MAX_BUF];
+    	    inet_ntop(AF_INET, &address.sin_addr, data_ip, MAX_BUF);  // convert ip in address.sin_addr to char array
+    	    int data_port = ntohs(address.sin_port) + 1; 
+          
+          // connect to socket
+    	    int data_fd = connectSocket(data_ip, data_port);
+
+          int result;
+          if (!strcmp(command, "PUT")) {
+            result = getFile(data_fd, arg1);   // flipped command on server side to recieve incoming file
           } else {
-            // accept incoming connection request: but will this break if another client tries to connect at the same time?
-            if ((accepted_socket = accept(master_socket, (struct sockaddr *)(&client_addr), &len)) < 0) {
-              fprintf(stderr, "Can't accept connection\n");
-              exit(EXIT_FAILURE);
-            }
-            int bytes_received = 1;
-            char buffer[MAX_BUF];
-            while (bytes_received > 0) {
-              bytes_received = read(accepted_socket, buffer, sizeof(buffer));
-              fprintf(file, "%s", buffer);
-            }
-            fclose(file);
-            close(accepted_socket);
-            strcpy(buf, "File uploaded to server");
+            result = putFile(data_fd, arg1);  // flipped command on server side to send file
           }
-        } else if (!strcmp(command, "GET")) {
-          printf("[%d]Entered GET\n", i);
-          // GET file arg1 from server and send result back to client
-          // for now echo the message back to client by not modifying buf
+          if (result == EXIT_SUCCESS) {
+            strcpy(buf, "File exchange successful");
+          } else {
+            strcpy(buf, "File exchange failed");
+          }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
           printf("[%d]Entered LS or PWD\n", i);
           changeDir(clients[i].work_dir);  // change server directory to client session working directory

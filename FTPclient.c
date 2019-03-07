@@ -1,15 +1,3 @@
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include "utils.h"
 
 static void callClientSystem(const char *command, const char *options);
@@ -24,27 +12,22 @@ int main(int argc, char *argv[])
   }
 
   // define server details
-  const char * const server_address = argv[1]; 
+  const char *server_address = argv[1]; 
   int server_port = atoi(argv[2]);
-  int sockfd, i;
-  struct sockaddr_in addr;
-
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    printf("Can't open socket\n");
-    exit(EXIT_FAILURE);
-  }
-
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(server_port);
-  inet_aton(server_address, &(addr.sin_addr));
-
-  if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    printf("Can't connect\n");
-    exit(EXIT_FAILURE);
-  }
+  
+  // Open connection to server
+  int server_fd = connectSocket(server_address, server_port);
+  
+  // Open data socket connection
+  int data_port = ntohs(server_port) + 1;  
+  int reuse;
+  struct serverSocket data_socket = serverSocketSetup(data_port, reuse);
+  
+  
+  // Create buffers
   char buf[MAX_BUF];
   char input[MAX_BUF];
+  
   while (true) {
     bool server_request = false;
     
@@ -62,7 +45,7 @@ int main(int argc, char *argv[])
         printf("Please input username.\n");
       } else {
         server_request = true;
-        write(sockfd, buf, strlen(buf));
+        write(server_fd, buf, strlen(buf));
       }
     } else if (!strcmp(command, "PASS")) {
       // printf("Entered PASSWORD\n");
@@ -70,56 +53,32 @@ int main(int argc, char *argv[])
         printf("Please input password.\n");
       } else {
         server_request = true;
-        write(sockfd, buf, strlen(buf));
+        write(server_fd, buf, strlen(buf));
       }
-    } else if (!strcmp(command, "PUT")) {
+    } else if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
       if (!arg1) {  // No filename provided
-        printf("Please input filename from client.\n");
+        printf("Please input filename for %s.\n", command);
       } else {
         server_request = true;
-        FILE * file = fopen(arg1, "r");
-        if (file == NULL) {
-          perror("Error opening file");
-        } else {
-          write(sockfd, buf, strlen(buf));
-          // should I reuse buf here?
-          // read line by line and send or read all and send? idk how to read all
-          // Set up TCP connection
-          int data_sock_fd;
-          if ((data_sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            printf("Can't open socket\n");
+        int data_fd;
+        
+        // send information to server and wait for connection
+        write(server_fd, buf, strlen(buf));
+        if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
+            fprintf(stderr, "Can't accept connection\n");
             exit(EXIT_FAILURE);
-          }
-          int connected;
-          if ((connected = connect(data_sock_fd, (struct sockaddr *)&addr, sizeof(addr))) < 0) {
-            printf("Can't connect\n");
-            exit(EXIT_FAILURE);
-          } else if (connected == 0) {
-            char buffer[MAX_BUF];
-            while(fgets(buffer, sizeof(buffer), file) != NULL) {
-              if (write(data_sock_fd, buffer, sizeof(buffer)) < 0) {
-                perror("Error writing to socket");
-              }
-            }
-            if (ferror(file)) {
-              perror("Error");
-            }
-            fclose(file);
-            close(data_sock_fd);
-          }
         }
-      }
-    } else if (!strcmp(command, "GET")) {
-      printf("Entered GET\n");
-      if (!arg1) {  // No filename provided
-        printf("Please input filename from host.\n");
-      } else {
-        server_request = true;
-        write(sockfd, buf, strlen(buf));
+        
+        // retrieve or send file
+        if (!strcmp(command, "PUT")) {
+          putFile(data_fd, arg1);
+        } else {
+          getFile(data_fd, arg1);
+        }
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
       server_request = true;
-      write(sockfd, buf, strlen(buf));
+      write(server_fd, buf, strlen(buf));
     } else if (!strcmp(command, "!LS") || !strcmp(command, "!PWD")) {
       callClientSystem(command, arg1);    
     } else if (!strcmp(command, "!CD")) {
@@ -130,7 +89,7 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Command not found\n");
     }
     if (server_request) {
-      if (read(sockfd, buf, sizeof(buf)) == 0) {
+      if (read(server_fd, buf, sizeof(buf)) == 0) {
         printf("Server closed connection\n");
         exit(EXIT_SUCCESS);
       }
