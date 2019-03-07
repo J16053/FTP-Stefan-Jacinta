@@ -19,7 +19,10 @@ int main(int argc, char *argv[])
   int server_fd = connectSocket(server_address, server_port);
   
   // Open data socket connection
-  int data_port = ntohs(server_port) + 1;  
+  struct sockaddr_in address;
+  int len = sizeof(address);
+  getsockname(server_fd, (struct sockaddr *)&address, (socklen_t*)&len);
+  int data_port = ntohs(address.sin_port) + 1;
   int reuse;
   struct serverSocket data_socket = serverSocketSetup(data_port, reuse);
   
