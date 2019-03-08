@@ -78,30 +78,31 @@ int putFile(int data_fd, const char *file_name) {
   // check for errors
   if (file_fd < 0) {
     perror("Error opening file");
+		return EXIT_FAILURE;
   } 
     
   // retrieve stats of file 
   struct stat st;  
   fstat(file_fd, &st);
-  
+
   // send file
   int sent_bytes = sendfile(data_fd, file_fd, NULL, st.st_size);
   
   // check for errors in sending file
   if (sent_bytes != st.st_size) {
-    perror("Failed to transfer file.");
+    perror("Failed to transfer file");
     return EXIT_FAILURE;
   } 
   
   // close the file and data socket
-  close(data_fd);
   close(file_fd);
+  close(data_fd);
   return EXIT_SUCCESS;
 }
 
 int getFile(int data_fd, const char *file_name) {
   
-  // open for for write
+  // open file for write
   FILE *file = fopen(file_name, "w");
   
   // check for errors when opening file to write
@@ -111,8 +112,8 @@ int getFile(int data_fd, const char *file_name) {
   } 
   
   // write data until nothing else is recieved
-  int bytes_received = 1;
   char buffer[MAX_BUF];
+  int bytes_received = read(data_fd, buffer, sizeof(buffer));
   while (bytes_received > 0) {
     bytes_received = read(data_fd, buffer, sizeof(buffer));
     fprintf(file, "%s", buffer);

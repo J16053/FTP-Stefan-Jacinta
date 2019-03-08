@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
           }
         }
       } else if (clients[i].status != LOGGED_IN) {
-        if (clients[i].status == USER_OK) {
+		if (clients[i].status == USER_OK) {
           strcpy(buf, "530 Password authentication is pending");
         } else {
           strcpy(buf, "530 User authentication is pending");
@@ -184,7 +184,10 @@ int main(int argc, char *argv[])
     	    socklen_t addrlen = sizeof(address);
           
           // store address of the client connected to the socket
-    	    getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen);
+    	    if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
+				perror("Error getting peer address");
+			}
+
     	    char data_ip[MAX_BUF];
     	    inet_ntop(AF_INET, &address.sin_addr, data_ip, MAX_BUF);  // convert ip in address.sin_addr to char array
     	    int data_port = ntohs(address.sin_port) + 1; 
