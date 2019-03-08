@@ -62,22 +62,33 @@ int main(int argc, char *argv[])
       if (!arg1) {  // No filename provided
         printf("Please input filename for %s.\n", command);
       } else {
-        server_request = true;
         int data_fd;
         
         // send information to server and wait for connection
         write(server_fd, buf, strlen(buf));
-        if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
-            fprintf(stderr, "Can't accept connection\n");
-            exit(EXIT_FAILURE);
-        }
-        
-        // retrieve or send file
-        if (!strcmp(command, "PUT")) {
-          putFile(data_fd, arg1);
-        } else {
-          getFile(data_fd, arg1);
-        }
+		
+				if (read(server_fd, buf, sizeof(buf)) == 0) {
+					printf("Server closed connection\n");
+					exit(EXIT_SUCCESS);
+				}
+				if (!strcmp(buf, "Ready to connect")) {
+					// wait for connection
+					server_request = true;
+					if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
+						fprintf(stderr, "Can't accept connection\n");
+						exit(EXIT_FAILURE);
+					}
+					
+					// retrieve or send file
+					int result;
+					if (!strcmp(command, "PUT")) {
+						result = putFile(data_fd, arg1);
+					} else {
+						result = getFile(data_fd, arg1);
+					}
+				} else {
+					printf("Server response:\n%s\n", buf);
+				}
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
       server_request = true;

@@ -176,7 +176,11 @@ int main(int argc, char *argv[])
         }
       } else {
         if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
-          // change directory to client working directory
+  				// send OK      	
+	  			strcpy(buf, "Ready to connect");
+					send(clients[i].socket, buf, sizeof(buf), 0);
+
+					// change directory to client working directory
           changeDir(clients[i].work_dir);
           
           // get socket information
