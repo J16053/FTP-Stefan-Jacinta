@@ -107,15 +107,6 @@ int putFile(int data_fd, const char *file_name) {
 
 int getFile(int data_fd, const char *file_name) {
   
-  // open file for write
-  FILE *file = fopen(file_name, "w");
-  
-  // check for errors when opening file to write
-  if (file == NULL) {
-    perror("Error opening file for writing");
-    return EXIT_FAILURE;
-  } 
-  
   // wait for connection
   struct timeval timeout;
   timeout.tv_sec = 2;  // no specific reason for 2 second timeout
@@ -132,6 +123,15 @@ int getFile(int data_fd, const char *file_name) {
     printf("Timeout on getFile\n"); // a timeout occured  on select
     return EXIT_FAILURE;
   }  
+  
+  // open file for write
+  FILE *file = fopen(file_name, "w");
+  
+  // check for errors when opening file to write
+  if (file == NULL) {
+    perror("Error opening file for writing");
+    return EXIT_FAILURE;
+  } 
   
   // write data until nothing else is recieved
   char buffer[MAX_BUF];
