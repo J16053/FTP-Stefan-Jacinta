@@ -58,7 +58,7 @@ struct serverSocket serverSocketSetup(const int port, int reuse) {
 
   if (bind(sock.fd, (struct sockaddr *) &sock.address, sock.len)) {
     close(sock.fd);
-    fprintf(stderr, "Can't bind socket\n");
+    perror("Can't bind socket");
     exit(EXIT_FAILURE);
   }
   
@@ -111,12 +111,28 @@ int getFile(int data_fd, const char *file_name) {
     return EXIT_FAILURE;
   } 
   
+  // wait for connection
+  struct timeval timeout;
+  timeout.tv_sec = 2;  // no specific reason for 2 second timeout
+  timeout.tv_usec = 0;
+  
+  fd_set read_fd_set;
+  FD_SET(data_fd, &read_fd_set);
+  int res = select(data_fd+1, &read_fd_set, NULL, NULL, &timeout);  
+  
+  if (res == -1) {
+    perror("Error on getFile"); // an error accured on select
+    return EXIT_FAILURE;
+  } else if (res == 0) {
+    printf("Timeout on getFile\n"); // a timeout occured  on select
+    return EXIT_FAILURE;
+  }  
+  
   // write data until nothing else is recieved
   char buffer[MAX_BUF];
-  int bytes_received = read(data_fd, buffer, sizeof(buffer));
-  while (bytes_received > 0) {
-    bytes_received = read(data_fd, buffer, sizeof(buffer));
-    fprintf(file, "%s", buffer);
+  ssize_t bytes_received;
+  while ((bytes_received = read(data_fd, buffer, sizeof(buffer))) > 0) {
+    fwrite(buffer, sizeof(char), bytes_received, file);
   }
   
   // close the file and data socket

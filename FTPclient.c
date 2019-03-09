@@ -18,19 +18,28 @@ int main(int argc, char *argv[])
   // Open connection to server
   int server_fd = connectSocket(server_address, server_port);
   
-  // Open data socket connection
+  // Determine data port
   struct sockaddr_in address;
   int len = sizeof(address);
   getsockname(server_fd, (struct sockaddr *)&address, (socklen_t*)&len);
   int data_port = ntohs(address.sin_port) + 1;
+  
+  // Bind and listen port for data transfer
   int reuse;
   struct serverSocket data_socket = serverSocketSetup(data_port, reuse);
   
+  printf("My address and port: %s:%d\n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+  printf("My data adress and port: %s:%d\n", inet_ntoa(data_socket.address.sin_addr), ntohs(data_socket.address.sin_port));
   
   // Create buffers
   char buf[MAX_BUF];
   char input[MAX_BUF];
   
+  struct timeval timeout;
+  timeout.tv_sec = 2;  // no specific reason for 2 second timeout
+  timeout.tv_usec = 0;
+  
+  // loop on user requests
   while (true) {
     bool server_request = false;
     
@@ -61,34 +70,54 @@ int main(int argc, char *argv[])
     } else if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
       if (!arg1) {  // No filename provided
         printf("Please input filename for %s.\n", command);
-      } else {
+      } else {  // some filename provided
         int data_fd;
+            
+        // clear the socket set
+        fd_set read_fd_set;
+        FD_ZERO(&read_fd_set);
+        FD_SET(server_fd, &read_fd_set);
         
-        // send information to server and wait for connection
+        // send request to server and wait for connection
         write(server_fd, buf, strlen(buf));
-		
+        int res = select(server_fd+1, &read_fd_set, NULL, NULL, &timeout);  
+        
+        if(res == -1) {
+          perror("Error on select"); // an error accured on select
+          continue;
+        } else if (res == 0) {
+          printf("Timeout\n"); // a timeout occured  on select
+          continue;
+        }  
+        
+        // check if server closed connection
 				if (read(server_fd, buf, sizeof(buf)) == 0) {
 					printf("Server closed connection\n");
 					exit(EXIT_SUCCESS);
 				}
+        
+        // check if server is ready to connect
 				if (!strcmp(buf, "Ready to connect")) {
+          
 					// wait for connection
-					server_request = true;
 					if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
-						fprintf(stderr, "Can't accept connection\n");
+            perror("Can't accept connection");
 						exit(EXIT_FAILURE);
 					}
+          
+          printf("Accepted connection from server: executing %s\n", command);
 					
 					// retrieve or send file
-					int result;
+          int success;
 					if (!strcmp(command, "PUT")) {
-						result = putFile(data_fd, arg1);
+						success = putFile(data_fd, arg1);
 					} else {
-						result = getFile(data_fd, arg1);
+						success = getFile(data_fd, arg1);
 					}
-				} else {
-					printf("Server response:\n%s\n", buf);
-				}
+          if (success == EXIT_SUCCESS) {
+            server_request = true;
+          } 
+				} 
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
       server_request = true;

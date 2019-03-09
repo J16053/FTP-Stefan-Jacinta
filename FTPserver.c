@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
           exit(EXIT_FAILURE);
       }
 
-      printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+      printf("Accepted connection from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
       // add new socket to array of clients
       for (i = 0; i < MAX_CLIENTS; i++) {
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
       int num = recv(clients[i].socket, buf, MAX_BUF, 0); // read from socket
       
       // client closed the connection
-      if (num == 0) {
+      if ((num == 0) || (num == -1)) {
         printf("[%d]Closing connection\n", i);
         close(clients[i].socket);
         FD_CLR(clients[i].socket, &read_fd_set); // clear the file descriptor set for client[i]
@@ -121,6 +121,7 @@ int main(int argc, char *argv[])
         clients[i].status = UNINITIATED;
         continue;
       } 
+      
       // client sent a server request
       printf("[%d]Received: %s\n", i, buf);
       char input[MAX_BUF];
@@ -176,25 +177,28 @@ int main(int argc, char *argv[])
         }
       } else {
         if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
-  				// send OK      	
-	  			strcpy(buf, "Ready to connect");
-					send(clients[i].socket, buf, sizeof(buf), 0);
 
 					// change directory to client working directory
           changeDir(clients[i].work_dir);
           
-          // get socket information
+          // setup socket structure to retrieve information of connected client
           struct sockaddr_in address;
     	    socklen_t addrlen = sizeof(address);
           
           // store address of the client connected to the socket
     	    if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
-				perror("Error getting peer address");
-			}
+				    perror("Error getting peer address");
+            continue;
+			    }
 
+          // determine data port of client
     	    char data_ip[MAX_BUF];
     	    inet_ntop(AF_INET, &address.sin_addr, data_ip, MAX_BUF);  // convert ip in address.sin_addr to char array
-    	    int data_port = ntohs(address.sin_port) + 1; 
+    	    int data_port = ntohs(address.sin_port) + 1;  // data port of client is +1 of control connection port
+          
+          // send OK      	
+	  			strcpy(buf, "Ready to connect");
+					send(clients[i].socket, buf, sizeof(buf), 0);
           
           // connect to socket
     	    int data_fd = connectSocket(data_ip, data_port);
@@ -208,7 +212,7 @@ int main(int argc, char *argv[])
           if (result == EXIT_SUCCESS) {
             strcpy(buf, "File exchange successful");
           } else {
-            strcpy(buf, "File exchange failed");
+            strcpy(buf, strerror(errno));
           }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
           printf("[%d]Entered LS or PWD\n", i);
