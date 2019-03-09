@@ -12,11 +12,11 @@ Test Cases
   any of the FTP / system commands to retrieve information from the server. 
  
 	- USER valid_username
-	[x]	Server responds with "331 Username OK, need password"
+	[x] Server responds with "331 Username OK, need password"
 	- USER invalid_username
-	[x]	Server responds with "430 Invalid username"
+	[x] Server responds with "430 Invalid username"
 	- USER (no_username)
-	[x]	Request not sent to server, display "Please input username."  
+	[x] Request not sent to server, display "Please input username."  
 
 - PASS password
   Each of the 4 aforementioned users have a corresponding password:
@@ -34,3 +34,11 @@ Test Cases
 	- PASS password (username not OK)
 	[x] Server responds with "530 User authentication is pending"
 
+- PUT file
+	Because the server and the client are often being run on the same machine during testing, be careful not to PUT a file to the same directory you are currently in: this may overwrite your original file.
+	- PUT file (not logged in)
+	[ ] Server responds with "530 User authentication is pending"
+	- PUT file (not authenticated)
+	[ ] Server responds with "530 Password authentication is pending"
+	- PUT valid_file
+	[x] File is sent to server and placed in server current directory: any existing file with the same name is overwritten
