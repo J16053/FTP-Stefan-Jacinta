@@ -30,6 +30,7 @@ int connectSocket(const char *ip_address, int server_port) {
   addr.sin_port = htons(server_port);
   if (!inet_aton(ip_address, &(addr.sin_addr))) {
     printf("Invalid address\n");
+    exit(EXIT_FAILURE);
   }
 
   if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -84,6 +85,10 @@ int putFile(int data_fd, const char *file_name) {
   // retrieve stats of file 
   struct stat st;  
   fstat(file_fd, &st);
+  char file_size[MAX_BUF];
+  sprintf(file_size, "%ld", st.st_size);
+  printf("File size sending: %s\n", file_size);
+  write(data_fd, file_size, MAX_BUF);
 
   // send file
   int sent_bytes = sendfile(data_fd, file_fd, NULL, st.st_size);
@@ -118,7 +123,7 @@ int getFile(int data_fd, const char *file_name) {
   
   fd_set read_fd_set;
   FD_SET(data_fd, &read_fd_set);
-  int res = select(data_fd+1, &read_fd_set, NULL, NULL, &timeout);  
+  int res = select(data_fd+1, &read_fd_set, NULL, NULL, &timeout);
   
   if (res == -1) {
     perror("Error on getFile"); // an error accured on select
@@ -130,6 +135,8 @@ int getFile(int data_fd, const char *file_name) {
   
   // write data until nothing else is recieved
   char buffer[MAX_BUF];
+  read(data_fd, buffer, MAX_BUF);
+  printf("File size recieving: %s\n", buffer);
   ssize_t bytes_received;
   while ((bytes_received = read(data_fd, buffer, sizeof(buffer))) > 0) {
     fwrite(buffer, sizeof(char), bytes_received, file);

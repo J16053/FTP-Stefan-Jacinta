@@ -188,31 +188,28 @@ int main(int argc, char *argv[])
           // store address of the client connected to the socket
     	    if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
 				    perror("Error getting peer address");
-            continue;
-			    }
-
-          // determine data port of client
-    	    char data_ip[MAX_BUF];
-    	    inet_ntop(AF_INET, &address.sin_addr, data_ip, MAX_BUF);  // convert ip in address.sin_addr to char array
-    	    int data_port = ntohs(address.sin_port) + 1;  // data port of client is +1 of control connection port
-          
-          // send OK      	
-	  			strcpy(buf, "Ready to connect");
-					send(clients[i].socket, buf, sizeof(buf), 0);
-          
-          // connect to socket
-    	    int data_fd = connectSocket(data_ip, data_port);
-
-          int result;
-          if (!strcmp(command, "PUT")) {
-            result = getFile(data_fd, arg1);   // flipped command on server side to recieve incoming file
-          } else {
-            result = putFile(data_fd, arg1);  // flipped command on server side to send file
-          }
-          if (result == EXIT_SUCCESS) {
-            strcpy(buf, "File exchange successful");
-          } else {
             strcpy(buf, strerror(errno));
+			    } else {
+            
+            // determine data port of client
+            char data_ip[MAX_BUF];
+            inet_ntop(AF_INET, &address.sin_addr, data_ip, MAX_BUF);  // convert ip in address.sin_addr to char array
+            int data_port = ntohs(address.sin_port) + 1;  // data port of client is +1 of control connection port
+            
+            // connect to socket
+            int data_fd = connectSocket(data_ip, data_port);
+            
+            int result;
+            if (!strcmp(command, "PUT")) {
+              result = getFile(data_fd, arg1);   // flipped command on server side to recieve incoming file
+            } else {
+              result = putFile(data_fd, arg1);  // flipped command on server side to send file
+            }
+            if (result == EXIT_SUCCESS) {
+              strcpy(buf, "File exchange successful");
+            } else {
+              strcpy(buf, strerror(errno));
+            }
           }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
           printf("[%d]Entered LS or PWD\n", i);

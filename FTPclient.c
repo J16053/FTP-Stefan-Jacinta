@@ -76,48 +76,33 @@ int main(int argc, char *argv[])
         // clear the socket set
         fd_set read_fd_set;
         FD_ZERO(&read_fd_set);
-        FD_SET(server_fd, &read_fd_set);
+        FD_SET(data_socket.fd, &read_fd_set);
         
-        // send request to server and wait for connection
+        // send request to server and wait for response
         write(server_fd, buf, strlen(buf));
-        int res = select(server_fd+1, &read_fd_set, NULL, NULL, &timeout);  
+        int res = select(data_socket.fd+1, &read_fd_set, NULL, NULL, &timeout);  
         
         if(res == -1) {
           perror("Error on select"); // an error accured on select
-          continue;
         } else if (res == 0) {
           printf("Timeout\n"); // a timeout occured  on select
-          continue;
-        }  
-        
-        // check if server closed connection
-				if (read(server_fd, buf, sizeof(buf)) == 0) {
-					printf("Server closed connection\n");
-					exit(EXIT_SUCCESS);
-				}
-        
-        // check if server is ready to connect
-				if (!strcmp(buf, "Ready to connect")) {
+        }  else {
           
-					// wait for connection
-					if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
+          // wait for connection
+          if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
             perror("Can't accept connection");
-						exit(EXIT_FAILURE);
-					}
+            exit(EXIT_FAILURE);
+          }
           
-          printf("Accepted connection from server: executing %s\n", command);
-					
-					// retrieve or send file
+          // retrieve or send file
           int success;
-					if (!strcmp(command, "PUT")) {
-						success = putFile(data_fd, arg1);
-					} else {
-						success = getFile(data_fd, arg1);
-					}
-          if (success == EXIT_SUCCESS) {
-            server_request = true;
-          } 
-				} 
+          if (!strcmp(command, "PUT")) {
+            success = putFile(data_fd, arg1);
+          } else {
+            success = getFile(data_fd, arg1);
+          }
+          server_request = true;
+        }
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
       server_request = true;
