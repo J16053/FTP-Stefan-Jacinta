@@ -157,10 +157,10 @@ int main(int argc, char *argv[])
         printf("[%d]Entered PASSWORD\n", i);
         // verify password
         if (clients[i].status == LOGGED_IN) {
-          printf("ALREADY LOGGED IN\n");
+          printf("[%d]ALREADY LOGGED IN\n", i);
 					strcpy(buf, "431 User already logged in");
         } else if (clients[i].status != USER_OK) {
-          printf("USER AUTHENTICATION PENDING\n");
+          printf("[%d]USER AUTHENTICATION PENDING\n", i);
 					strcpy(buf, "530 User authentication is pending");
         } else { // clients[i].status == USER_OK
           if (!strcmp(arg1, USERS[clients[i].user].password)) {
@@ -174,10 +174,10 @@ int main(int argc, char *argv[])
         }
       } else if (clients[i].status != LOGGED_IN) {
 				if (clients[i].status == USER_OK) {
-          printf("PASSWORD AUTHENTICATION PENDING\n");
+          printf("[%d]PASSWORD AUTHENTICATION PENDING\n", i);
 					strcpy(buf, "530 Password authentication is pending");
         } else {
-					printf("USER AUTHENTICATION PENDING\n");
+					printf("[%d]USER AUTHENTICATION PENDING\n", i);
           strcpy(buf, "530 User authentication is pending");
         }
       } else {
@@ -229,11 +229,11 @@ int main(int argc, char *argv[])
           } else { // update work_dir field of client
             callServerSystem("PWD", NULL, buf);
             strcpy(clients[i].work_dir, buf); // 212
-            printf("CHANGED DIRECTORY\n");
+            printf("[%d]CHANGED DIRECTORY\n", i);
 						strcpy(buf, "250 Changed directory");
           }
         } else {
-          printf("COMMAND UNKNOWN\n");
+          printf("[%d]COMMAND UNKNOWN\n", i);
 					strcpy(buf, "502 Invalid FTP command");
         }
       }
