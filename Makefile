@@ -1,3 +1,5 @@
+main: FTPserver FTPclient
+
 FTPserver: FTPserver.o utils.o
 	mkdir -p bin
 	gcc -std=gnu99 FTPserver.o utils.o -o bin/FTPserver
