@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
 
   int reuse;
   struct serverSocket master_socket = serverSocketSetup(port, reuse);
+	printf("Listening on port %d\n", port);
 
   while (1) {
 
@@ -141,24 +142,26 @@ int main(int argc, char *argv[])
         }
         for (int u = 0; u < NUM_USERS; u++) {
           if (!strcmp(arg1, USERS[u].username)) {
-            printf("[%d]VALID USERNAME\n", i);
             clients[i].status = USER_OK;
             clients[i].user = u;
+            printf("[%d]VALID USERNAME\n", i);
             strcpy(buf, "331 Username OK, need password");
             break;
           }
         }
         if (clients[i].status != USER_OK) {
-          strcpy(buf, "430 Invalid username");
           printf("[%d]INVALID USERNAME\n", i);
+          strcpy(buf, "430 Invalid username");
         }
       } else if (!strcmp(command, "PASS")) {
         printf("[%d]Entered PASSWORD\n", i);
         // verify password
         if (clients[i].status == LOGGED_IN) {
-          strcpy(buf, "431 User already logged in");
+          printf("ALREADY LOGGED IN\n");
+					strcpy(buf, "431 User already logged in");
         } else if (clients[i].status != USER_OK) {
-          strcpy(buf, "530 User authentication is pending");
+          printf("USER AUTHENTICATION PENDING\n");
+					strcpy(buf, "530 User authentication is pending");
         } else { // clients[i].status == USER_OK
           if (!strcmp(arg1, USERS[clients[i].user].password)) {
             clients[i].status = LOGGED_IN;
@@ -170,14 +173,17 @@ int main(int argc, char *argv[])
           }
         }
       } else if (clients[i].status != LOGGED_IN) {
-		if (clients[i].status == USER_OK) {
-          strcpy(buf, "530 Password authentication is pending");
+				if (clients[i].status == USER_OK) {
+          printf("PASSWORD AUTHENTICATION PENDING\n");
+					strcpy(buf, "530 Password authentication is pending");
         } else {
+					printf("USER AUTHENTICATION PENDING\n");
           strcpy(buf, "530 User authentication is pending");
         }
       } else {
         if (!strcmp(command, "PUT") || !strcmp(command, "GET")) {
-
+          printf("[%d]Entered PUT or GET\n", i);
+					
 					// change directory to client working directory
           changeDir(clients[i].work_dir);
           
@@ -206,9 +212,9 @@ int main(int argc, char *argv[])
               result = putFile(data_fd, arg1);  // flipped command on server side to send file
             }
             if (result == EXIT_SUCCESS) {
-              strcpy(buf, "File exchange successful");
+              strcpy(buf, "226 File transfer successful");
             } else {
-              strcpy(buf, strerror(errno));
+              strcpy(buf, strerror(errno)); // errno set to Success?? // strcpy(buf, "450 File transfer failed");
             }
           }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
@@ -219,14 +225,16 @@ int main(int argc, char *argv[])
           printf("[%d]Entered CD\n", i);
           changeDir(clients[i].work_dir);  // change server directory to client session working directory
           if (changeDir(arg1) == EXIT_FAILURE) {
-            strcpy(buf, strerror(errno));
+            strcpy(buf, strerror(errno)); // 504
           } else { // update work_dir field of client
             callServerSystem("PWD", NULL, buf);
-            strcpy(clients[i].work_dir, buf);
-            strcpy(buf, "250 Changed directory");
+            strcpy(clients[i].work_dir, buf); // 212
+            printf("CHANGED DIRECTORY\n");
+						strcpy(buf, "250 Changed directory");
           }
         } else {
-          strcpy(buf, "502 Invalid FTP command");
+          printf("COMMAND UNKNOWN\n");
+					strcpy(buf, "502 Invalid FTP command");
         }
       }
       send(clients[i].socket, buf, sizeof(buf), 0);

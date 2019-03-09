@@ -21,7 +21,7 @@ int connectSocket(const char *ip_address, int server_port) {
   struct sockaddr_in addr;
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    printf("Can't open socket\n");
+    fprintf(stderr, "Can't open socket\n");
     exit(EXIT_FAILURE);
   }
 
@@ -29,12 +29,12 @@ int connectSocket(const char *ip_address, int server_port) {
   addr.sin_family = AF_INET;
   addr.sin_port = htons(server_port);
   if (!inet_aton(ip_address, &(addr.sin_addr))) {
-    printf("Invalid address\n");
+    fprintf(stderr, "Invalid address\n");
     exit(EXIT_FAILURE);
   }
 
   if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-    printf("Can't connect\n");
+    fprintf(stderr, "Can't connect\n");
     exit(EXIT_FAILURE);
   }
   
@@ -63,7 +63,7 @@ struct serverSocket serverSocketSetup(const int port, int reuse) {
     exit(EXIT_FAILURE);
   }
   
-  if (listen(sock.fd, 5) < 0) {
+  if (listen(sock.fd, 1) < 0) {
     close(sock.fd);
     fprintf(stderr, "Can't listen on socket\n");
     exit(EXIT_FAILURE);
@@ -92,7 +92,12 @@ int putFile(int data_fd, const char *file_name) {
 
   // send file
   int sent_bytes = sendfile(data_fd, file_fd, NULL, st.st_size);
-  
+ 
+	if (sent_bytes == -1) {
+		perror("Error sending file");
+		return EXIT_FAILURE;
+	}
+ 
   // check for errors in sending file
   if (sent_bytes != st.st_size) {
     perror("Failed to transfer file");
@@ -120,7 +125,7 @@ int getFile(int data_fd, const char *file_name) {
     perror("Error on getFile"); // an error accured on select
     return EXIT_FAILURE;
   } else if (res == 0) {
-    printf("Timeout on getFile\n"); // a timeout occured  on select
+    fprintf(stderr, "Timeout on getFile\n"); // a timeout occured  on select
     return EXIT_FAILURE;
   }  
   
@@ -133,13 +138,13 @@ int getFile(int data_fd, const char *file_name) {
     return EXIT_FAILURE;
   } 
   
-  // write data until nothing else is recieved
+  // write data until nothing else is received
   char buffer[MAX_BUF];
   read(data_fd, buffer, MAX_BUF);
-  printf("File size recieving: %s\n", buffer);
+  printf("File size receiving: %s\n", buffer);
   ssize_t bytes_received;
   while ((bytes_received = read(data_fd, buffer, sizeof(buffer))) > 0) {
-    fwrite(buffer, sizeof(char), bytes_received, file);
+		fwrite(buffer, sizeof(char), bytes_received, file);
   }
   
   // close the file and data socket

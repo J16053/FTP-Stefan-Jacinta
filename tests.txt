@@ -37,8 +37,58 @@ Test Cases
 - PUT file
 	Because the server and the client are often being run on the same machine during testing, be careful not to PUT a file to the same directory you are currently in: this may overwrite your original file.
 	- PUT file (not logged in)
-	[ ] Server responds with "530 User authentication is pending"
+	[x] Server responds with "530 User authentication is pending"
 	- PUT file (not authenticated)
-	[ ] Server responds with "530 Password authentication is pending"
+	[x] Server responds with "530 Password authentication is pending"
 	- PUT valid_file
 	[x] File is sent to server and placed in server current directory: any existing file with the same name is overwritten
+	- PUT invalid_file
+	[ ] Request not sent to server, error message displayed
+
+- GET file
+	- GET file (not logged in)
+	[x] Server responds with "530 User authentication is pending"
+	- GET file (not authenticated)
+	[x] Server responds with "530 Password authentication is pending"
+	- GET valid_file
+	[x] File is retrieved from server and placed in client current directory: any existing file with the same name is overwritten
+	- GET invalid_file
+	[ ] Server responds with "some_error_code File doesn't exist or whatever"
+
+- PWD
+	- PWD (not logged in)
+	[x] Server responds with "530 Authentication pending"
+	- PWD
+	[x] Prints working directory of server
+	- PWD arg
+	[x] Prints working directory of server
+
+- !PWD
+	- !PWD (not logged in)
+	[x] Prints working directory of client
+	- !PWD
+	[x] Prints working directory of client
+
+- LS
+	- LS (not logged in)
+	[x] Server responds with "530 Authentication pending"
+	- LS
+	[x] Lists contents of server's current working directory
+	- LS arg
+	[x] Lists contents of server's current working directory
+
+- !LS
+	- !LS (not logged in)
+	[x] Lists contents of client's current working directory
+	- !LS
+	[x] Lists contents of client's current working directory
+	- !LS arg
+	[x] Lists contents of client's current working directory
+
+- CD
+	- CD valid_directory (not logged in)
+	[x] Server responds with "530 Authentication pending"
+	- CD valid_directory
+	[x] Server responds with "250 Changed directory", server's current working directory is changed to valid_directory
+	- CD invalid_directory
+	[x] Server responds with error

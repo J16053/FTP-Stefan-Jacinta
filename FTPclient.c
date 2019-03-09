@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
   struct serverSocket data_socket = serverSocketSetup(data_port, reuse);
   
   printf("My address and port: %s:%d\n", inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-  printf("My data adress and port: %s:%d\n", inet_ntoa(data_socket.address.sin_addr), ntohs(data_socket.address.sin_port));
+  printf("My data address and port: %s:%d\n", inet_ntoa(data_socket.address.sin_addr), ntohs(data_socket.address.sin_port));
   
   // Create buffers
   char buf[MAX_BUF];
@@ -71,6 +71,9 @@ int main(int argc, char *argv[])
       if (!arg1) {  // No filename provided
         printf("Please input filename for %s.\n", command);
       } else {  // some filename provided
+        server_request = true;
+        //send request to server
+				write(server_fd, buf, strlen(buf));
         int data_fd;
             
         // clear the socket set
@@ -78,15 +81,14 @@ int main(int argc, char *argv[])
         FD_ZERO(&read_fd_set);
         FD_SET(data_socket.fd, &read_fd_set);
         
-        // send request to server and wait for response
-        write(server_fd, buf, strlen(buf));
+        // wait for response on data_socket
         int res = select(data_socket.fd+1, &read_fd_set, NULL, NULL, &timeout);  
         
         if(res == -1) {
           perror("Error on select"); // an error accured on select
         } else if (res == 0) {
-          printf("Timeout\n"); // a timeout occured  on select
-        }  else {
+          ; // a timeout occured on select
+				} else {
           
           // wait for connection
           if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
@@ -101,7 +103,6 @@ int main(int argc, char *argv[])
           } else {
             success = getFile(data_fd, arg1);
           }
-          server_request = true;
         }
       }
     } else if (!strcmp(command, "CD") || !strcmp(command, "LS") || !strcmp(command, "PWD")) {
