@@ -2,11 +2,7 @@
 
 int changeDir(const char *path) {
   int response;
-  if (!path) {
-    response = chdir("/");
-  } else {
-    response = chdir(path);
-  }
+  response = chdir(path);
   if (response == -1) {
     perror("Error");
     return EXIT_FAILURE;
@@ -87,8 +83,7 @@ int putFile(int data_fd, const char *file_name) {
   fstat(file_fd, &st);
   char file_size[MAX_BUF];
   sprintf(file_size, "%ld", st.st_size);
-  printf("File size sending: %s\n", file_size);
-  write(data_fd, file_size, MAX_BUF);
+  printf("File size: %s\n", file_size);
 
   // send file
   int sent_bytes = sendfile(data_fd, file_fd, NULL, st.st_size);
@@ -107,6 +102,7 @@ int putFile(int data_fd, const char *file_name) {
   // close the file and data socket
   close(file_fd);
   close(data_fd);
+  printf("File sent successfully\n");
   return EXIT_SUCCESS;
 }
 
@@ -118,6 +114,7 @@ int getFile(int data_fd, const char *file_name) {
   timeout.tv_usec = 0;
   
   fd_set read_fd_set;
+  FD_ZERO(&read_fd_set);
   FD_SET(data_fd, &read_fd_set);
   int res = select(data_fd+1, &read_fd_set, NULL, NULL, &timeout);
   
@@ -138,10 +135,8 @@ int getFile(int data_fd, const char *file_name) {
     return EXIT_FAILURE;
   } 
   
-  // write data until nothing else is received
+  // Receive data
   char buffer[MAX_BUF];
-  read(data_fd, buffer, MAX_BUF);
-  printf("File size receiving: %s\n", buffer);
   ssize_t bytes_received;
   while ((bytes_received = read(data_fd, buffer, sizeof(buffer))) > 0) {
 		fwrite(buffer, sizeof(char), bytes_received, file);
@@ -151,4 +146,16 @@ int getFile(int data_fd, const char *file_name) {
   fclose(file);
   close(data_fd);
   return EXIT_SUCCESS;
+}
+
+// Check if a file exist using fopen() function
+// 0 is false and 1 is true
+int fileExists(const char *filename) {
+    /* try to open file to read */
+    FILE *file;
+    if (file = fopen(filename, "r")){
+        fclose(file);
+        return 1;
+    }
+    return 0;
 }

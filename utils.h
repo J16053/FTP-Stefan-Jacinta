@@ -32,5 +32,6 @@ int connectSocket(const char *ip_address, int server_port);
 struct serverSocket serverSocketSetup(const int port, int reuse);
 int putFile(int data_fd, const char *file_name);
 int getFile(int data_fd, const char *file_name);
+int fileExists(const char *filename);
 
 #endif

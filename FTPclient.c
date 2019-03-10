@@ -35,12 +35,11 @@ int main(int argc, char *argv[])
   char buf[MAX_BUF];
   char input[MAX_BUF];
   
-  struct timeval timeout;
-  timeout.tv_sec = 2;  // no specific reason for 2 second timeout
-  timeout.tv_usec = 0;
-  
   // loop on user requests
   while (true) {
+    struct timeval timeout;
+    timeout.tv_sec = 2;  // no specific reason for 2 second timeout
+    timeout.tv_usec = 0;
     bool server_request = false;
     
     printf("ftp > ");
@@ -71,25 +70,33 @@ int main(int argc, char *argv[])
       if (!arg1) {  // No filename provided
         printf("Please input filename for %s.\n", command);
       } else {  // some filename provided
-        server_request = true;
-        //send request to server
-				write(server_fd, buf, strlen(buf));
-        int data_fd;
-            
+        
+        if (!strcmp(command, "PUT")) {
+          if (!fileExists(arg1)) {
+            perror("Error on PUT");
+            continue;
+          }
+        }
+        
         // clear the socket set
         fd_set read_fd_set;
         FD_ZERO(&read_fd_set);
         FD_SET(data_socket.fd, &read_fd_set);
         
-        // wait for response on data_socket
+        // send request to server
+        server_request = true;
+        write(server_fd, buf, strlen(buf));
+
+        // wait for connection on data_socket
         int res = select(data_socket.fd+1, &read_fd_set, NULL, NULL, &timeout);  
         
         if(res == -1) {
-          perror("Error on select"); // an error accured on select
+          perror("Error on select"); // an error occured on select
         } else if (res == 0) {
-          ; // a timeout occured on select
+          fprintf(stderr, "Timeout on data socket connection\n");; // a timeout occured on select
 				} else {
           
+          int data_fd;
           // wait for connection
           if ((data_fd = accept(data_socket.fd, (struct sockaddr *)(&data_socket.address), &data_socket.len)) < 0) {
             perror("Can't accept connection");
@@ -97,11 +104,10 @@ int main(int argc, char *argv[])
           }
           
           // retrieve or send file
-          int success;
           if (!strcmp(command, "PUT")) {
-            success = putFile(data_fd, arg1);
+            putFile(data_fd, arg1);
           } else {
-            success = getFile(data_fd, arg1);
+            getFile(data_fd, arg1);
           }
         }
       }

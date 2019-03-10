@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
   int maxfd, i;
   int port = 9999;
   char buf[MAX_BUF];
+  char base_dir[MAX_BUF];
   
   struct client {
     int socket; // socket descriptor
@@ -32,12 +33,12 @@ int main(int argc, char *argv[])
 
   
   // initialize array of clients
-  callServerSystem("PWD", NULL, buf);  // default working directory of all clients is initial working directory of server
+  callServerSystem("PWD", NULL, base_dir);  // default working directory of all clients is initial working directory of server
   for (i = 0; i < MAX_CLIENTS; i++) {
     clients[i].socket = UNINITIATED;
     clients[i].status = UNINITIATED;
     clients[i].user = UNINITIATED;
-    strcpy(clients[i].work_dir, buf);
+    strcpy(clients[i].work_dir, base_dir);
   }
 
   int reuse;
@@ -90,6 +91,7 @@ int main(int argc, char *argv[])
           if (clients[i].socket < 0) {
               clients[i].socket = accepted_socket;
               clients[i].status = CONNECTED;
+              strcpy(clients[i].work_dir, base_dir);
               printf("[%d]Adding client to list of sockets with socket\n", i);
               break;
           }
@@ -189,13 +191,13 @@ int main(int argc, char *argv[])
           
           // setup socket structure to retrieve information of connected client
           struct sockaddr_in address;
-    	    socklen_t addrlen = sizeof(address);
+          socklen_t addrlen = sizeof(address);
           
           // store address of the client connected to the socket
-    	    if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
-				    perror("Error getting peer address");
+          if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
+            perror("Error getting peer address");
             strcpy(buf, strerror(errno));
-			    } else {
+          } else {
             
             // determine data port of client
             char data_ip[MAX_BUF];
@@ -214,7 +216,8 @@ int main(int argc, char *argv[])
             if (result == EXIT_SUCCESS) {
               strcpy(buf, "226 File transfer successful");
             } else {
-              strcpy(buf, strerror(errno)); // errno set to Success?? // strcpy(buf, "450 File transfer failed");
+              strcpy(buf, "450 File transfer failed: ");
+              strcat(buf, strerror(errno));
             }
           }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {
