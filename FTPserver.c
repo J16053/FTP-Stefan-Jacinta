@@ -189,13 +189,13 @@ int main(int argc, char *argv[])
           
           // setup socket structure to retrieve information of connected client
           struct sockaddr_in address;
-    	    socklen_t addrlen = sizeof(address);
+          socklen_t addrlen = sizeof(address);
           
           // store address of the client connected to the socket
-    	    if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
-				    perror("Error getting peer address");
+          if (getpeername(clients[i].socket, (struct sockaddr *)&address, &addrlen) == -1) {
+            perror("Error getting peer address");
             strcpy(buf, strerror(errno));
-			    } else {
+          } else {
             
             // determine data port of client
             char data_ip[MAX_BUF];
@@ -214,7 +214,8 @@ int main(int argc, char *argv[])
             if (result == EXIT_SUCCESS) {
               strcpy(buf, "226 File transfer successful");
             } else {
-              strcpy(buf, strerror(errno)); // errno set to Success?? // strcpy(buf, "450 File transfer failed");
+              strcpy(buf, "450 File transfer failed: ");
+              strcat(buf, strerror(errno));
             }
           }
         } else if (!strcmp(command, "LS") || !strcmp(command, "PWD")) {

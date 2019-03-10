@@ -24,10 +24,13 @@ Test Cases
     STEFAN has password SUPER.
     YASIR has password ZAKI.
     THOMAS has password POTSCH.
+  Once authenticated, the client can become un-authenticated only if a new valid
+  user name is provided. If the user is logged in and an incorrect user name is
+  provided, the previously authenticated user will remain logged in.
     
-	- PASS valid_password
+	- PASS valid_password (username OK)
 	[x] Server responds with "230 User logged in, proceed"
-	- PASS invalid_password
+	- PASS invalid_password (username OK)
 	[x] Server responds with "430 Incorrect password"
 	- PASS (no_password)
 	[x] Request not sent to server, display "Please input password."
@@ -36,24 +39,28 @@ Test Cases
 
 - PUT file
 	Because the server and the client are often being run on the same machine during testing, be careful not to PUT a file to the same directory you are currently in: this may overwrite your original file.
-	- PUT file (not logged in)
+	- PUT valid_file (username not OK)
+  [x] Client responds "Timeout on data socket connection"
 	[x] Server responds with "530 User authentication is pending"
-	- PUT file (not authenticated)
+	- PUT valid_file (not authenticated)
+  [x] Client responds "Timeout on data socket connection"
 	[x] Server responds with "530 Password authentication is pending"
-	- PUT valid_file
+	- PUT valid_file (authenticated)
 	[x] File is sent to server and placed in server current directory: any existing file with the same name is overwritten
-	- PUT invalid_file
-	[ ] Request not sent to server, error message displayed
+	- PUT invalid_file 
+	[x] Request not sent to server, error message displayed
 
 - GET file
 	- GET file (not logged in)
+  [x] Client responds "Timeout on data socket connection"
 	[x] Server responds with "530 User authentication is pending"
 	- GET file (not authenticated)
+  [x] Client responds "Timeout on data socket connection"
 	[x] Server responds with "530 Password authentication is pending"
 	- GET valid_file
 	[x] File is retrieved from server and placed in client current directory: any existing file with the same name is overwritten
 	- GET invalid_file
-	[ ] Server responds with "some_error_code File doesn't exist or whatever"
+	[x] Server responds with "some_error_code File doesn't exist or whatever"
 
 - PWD
 	- PWD (not logged in)
