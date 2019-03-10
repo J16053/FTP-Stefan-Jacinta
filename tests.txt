@@ -32,9 +32,13 @@ These cases were tested by running the FTPserver and the FTPclient locally and s
   provided, the previously authenticated user will remain logged in.
     
 	- PASS valid_password (username OK)
-	[x] Server responds with "230 User logged in, proceed"
+	[x] Server responds with "230 User logged in, proceed", user is logged in
 	- PASS invalid_password (username OK)
 	[x] Server responds with "430 Incorrect password"
+	- PASS valid_password (logged in)
+	[x] Server responds with "431 User already logged in"
+	- PASS invalid_password (logged in)
+	[x] Server responds with "431 User already logged in"
 	- PASS (no_password)
 	[x] Request not sent to server, display "Please input password."
 	- PASS password (username not OK)
