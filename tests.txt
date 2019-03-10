@@ -1,5 +1,8 @@
 Test Cases
 ---
+For a list of current known issues, see the Issues tab on Github.
+
+These cases were tested by running the FTPserver and the FTPclient locally and sending commands that we both expected to work and not work from the client to the server. The commands were also tested while multiple clients were connected, although not all possible combinations of commands across different clients were tested. Client and server disconnects were also tested by shutting down the client or server processes mid-communication, but it was difficult to test client/server disconnect during the transmission of a command or file because those times were quite short (file transfer was only tested with relatively small (<1 MB) files).
 
 - USER username
   Currently, the server holds 4 users: STEFAN, JACINTA, YASIR, and THOMAS.
@@ -60,7 +63,7 @@ Test Cases
 	- GET valid_file
 	[x] File is retrieved from server and placed in client current directory: any existing file with the same name is overwritten
 	- GET invalid_file
-	[x] Server responds with "some_error_code File doesn't exist or whatever"
+	[x] Server responds with error
 
 - PWD
 	- PWD (not logged in)
@@ -99,3 +102,11 @@ Test Cases
 	[x] Server responds with "250 Changed directory", server's current working directory is changed to valid_directory
 	- CD invalid_directory
 	[x] Server responds with error
+
+- !CD
+	- !CD valid_directory (not logged in)
+	[x] Changes client directory to valid_directory
+	- CD valid_directory
+	[x] Changes client directory to valid_directory
+	- CD invalid_directory
+	[x] Prints error message
