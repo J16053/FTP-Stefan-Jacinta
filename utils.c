@@ -2,11 +2,7 @@
 
 int changeDir(const char *path) {
   int response;
-  if (!path) {
-    response = chdir("/");
-  } else {
-    response = chdir(path);
-  }
+  response = chdir(path);
   if (response == -1) {
     perror("Error");
     return EXIT_FAILURE;

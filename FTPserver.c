@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
   int maxfd, i;
   int port = 9999;
   char buf[MAX_BUF];
+  char base_dir[MAX_BUF];
   
   struct client {
     int socket; // socket descriptor
@@ -32,12 +33,12 @@ int main(int argc, char *argv[])
 
   
   // initialize array of clients
-  callServerSystem("PWD", NULL, buf);  // default working directory of all clients is initial working directory of server
+  callServerSystem("PWD", NULL, base_dir);  // default working directory of all clients is initial working directory of server
   for (i = 0; i < MAX_CLIENTS; i++) {
     clients[i].socket = UNINITIATED;
     clients[i].status = UNINITIATED;
     clients[i].user = UNINITIATED;
-    strcpy(clients[i].work_dir, buf);
+    strcpy(clients[i].work_dir, base_dir);
   }
 
   int reuse;
@@ -90,6 +91,7 @@ int main(int argc, char *argv[])
           if (clients[i].socket < 0) {
               clients[i].socket = accepted_socket;
               clients[i].status = CONNECTED;
+              strcpy(clients[i].work_dir, base_dir);
               printf("[%d]Adding client to list of sockets with socket\n", i);
               break;
           }
