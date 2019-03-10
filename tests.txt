@@ -56,7 +56,7 @@ These cases were tested by running the FTPserver and the FTPclient locally and s
 	- GET valid_file
 	[x] File is retrieved from server and placed in client current directory: any existing file with the same name is overwritten
 	- GET invalid_file
-	[ ] Server responds with "some_error_code File doesn't exist or whatever"
+	[x] Server responds with error
 
 - PWD
 	- PWD (not logged in)
